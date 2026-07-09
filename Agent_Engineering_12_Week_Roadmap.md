@@ -1,2545 +1,2709 @@
 # Agent Engineering 12 周学习与求职路线
 
-> 面向对象：已有 Python、机器学习、Transformer/NLP 基础，希望真正形成 **Agent 思维**，掌握单 Agent、多 Agent、LangGraph、评估、MCP、工程化与作品集能力。
+> **文件名固定：** `Agent_Engineering_12_Week_Roadmap.md`
 >
-> 个性化主项目：**面向低热水泥 / AI4Materials 的多 Agent 文献结构化抽取系统**。
+> **新版定位：** Hello-Agents 作为“Agent 思维与原理主教材”；LangChain v1 / LangGraph / LangSmith / MCP 官方文档作为“工程主训练”；你的 **Multi-Agent Literature Extraction System（多 Agent 文献结构化抽取系统）**作为贯穿 12 周的唯一主项目；低热水泥 / AI4Materials 文献仅作为可选应用与评测场景，不定义项目身份。
 >
-> 版本核验日期：**2026-07-09**。
+> **版本核验日期：** 2026-07-09。Agent 生态变化很快，执行时若 API 有变，以当天官方文档为准。
 >
-> 时间约束：**每天不超过 3 小时**；默认每周 6 天主学习 + 1 天复盘。全程约 170–200 小时。
+> **时间约束：** 每天最多 3 小时；84 天连续计划；总投入约 210–235 小时。
 
 ---
 
-## 0. 先给结论：这 12 周真正要培养什么
+## 0. 这版为什么重构
 
-这份计划的目标不是“会调用几个 Agent 框架 API”，而是形成以下工程判断：
-
-1. **先判断 Workflow 还是 Agent**：路径固定就用确定性工作流；路径需要动态决策才引入 Agent。
-2. **把 Agent 看成闭环系统**：`Goal → Observe → Decide → Act → Observe → Update State → Stop/Continue`。
-3. **Tool 是可执行接口，不是 Prompt 装饰品**：每个工具必须有输入契约、输出契约、错误语义和副作用边界。
-4. **区分 State / Context / Memory**：当前执行状态、模型当前可见上下文、跨轮持久记忆不是一回事。
-5. **不迷信“自主性”**：高风险动作、不可逆动作、低置信度动作应进入 HITL 或确定性校验。
-6. **所有 Agent 都必须有停止条件**：最大步数、最大成本、超时、重复轨迹检测、失败降级。
-7. **确定性外壳 + 概率性核心**：Schema、正则、单位换算、数据库约束、状态机负责兜底；LLM 负责语义判断。
-8. **先把单 Agent 做到可测，再考虑 Multi-Agent**：多 Agent 不是“越多越强”，而是为上下文隔离、专业分工、并行化和权限隔离服务。
-9. **评估轨迹，不只评估最终答案**：最终答案正确但调用了错误工具、成本过高、循环异常，也是不合格。
-10. **生产 Agent 本质上是软件系统**：需要日志、Tracing、Eval、重试、幂等、权限、部署、测试和成本治理。
-
----
-
-# 一、总体 Level 设计
-
-| Level | 周期 | 核心能力 | 主要产物 |
-|---|---:|---|---|
-| Level 0 | Week 1–2 | Agent 基础思维、Tool Calling、手写 Agent Loop | 无框架 `mini-agent` |
-| Level 1 | Week 3–4 | LangChain v1 单 Agent、结构化输出、错误处理 | `paper-extractor-agent-v1` |
-| Level 2 | Week 5–6 | LangGraph State/Node/Edge、持久化、HITL | `paper-extraction-graph-v2` |
-| Level 3 | Week 7–8 | Multi-Agent 架构、Supervisor、Router、并行研究 | `paper-multi-agent-v3` |
-| Level 4 | Week 9–10 | Evaluation、Tracing、Context Engineering、MCP | `agent-eval-suite` + MCP Server |
-| Level 5 | Week 11–12 | API、Docker、测试、部署、作品集与面试 | 可运行的 `FIRe Literature Agent` |
-
-**晋级规则：**每个 Level 末尾必须通过验收。未通过时，不建议继续堆框架。
-
----
-
-# 二、统一的每日时间模板（≤ 3 h）
-
-正常学习日：
+旧版路线偏“工程框架训练”；新版补上了 Hello-Agents 最有价值的连续认知链：
 
 ```text
-35–45 min   阅读官方资料，写 5–10 行概念笔记
-80–100 min  独立编码，不照抄完整答案
-25–35 min   测试、故障注入、查看 Trace
-15–25 min   复盘：今天做了什么决策？为什么？
-------------------------------------------
-总计         2 h 35 min – 3 h
+什么是 Agent
+   ↓
+ReAct / Plan-and-Solve / Reflection
+   ↓
+自己实现 Agent Loop
+   ↓
+自己构建最小 Agent Harness
+   ↓
+再进入 LangChain v1 / LangGraph
+   ↓
+Multi-Agent Coordination
+   ↓
+Evaluation / Tracing / Context / MCP
+   ↓
+FastAPI / Testing / Docker / Portfolio
 ```
 
-复盘日：
+核心原则：**Hello-Agents 是主教材，不是唯一工程世界观；官方文档与可测项目负责把能力拉到求职水平。**
+
+---
+
+## 1. 12 周 Level 总览
+
+| Level | 周期 | 核心能力 | 主要产出 | 晋级本质 |
+|---|---|---|---|---|
+| Level 0 | Week 1–2 | Agent 思维 + 经典范式 + 无框架 Loop | `mini-agent + 20-case eval` | 理解 ReAct / Plan-and-Solve / Reflection，并能手写受控 Agent Loop |
+| Level 1 | Week 3–4 | 自研 Agent Harness + LangChain v1 | `自研 mini framework + single-agent extractor v1` | 既能造轮子，又能解释现代 Agent harness 的抽象 |
+| Level 2 | Week 5–6 | LangGraph 状态化编排 + Persistence + HITL | `paper-extraction-graph-v2` | 能构建可暂停、可恢复、可测试的 stateful agent |
+| Level 3 | Week 7–8 | Multi-Agent 协调 + DeepResearch 思维 | `paper-multi-agent-v3 + baseline study` | 能证明何时多 Agent 有价值，何时没有 |
+| Level 4 | Week 9–10 | Evaluation + Tracing + Context Engineering + MCP | `eval suite + context ablation + MCP server` | 能用数据和 trace 驱动可靠性改进 |
+| Level 5 | Week 11–12 | Production + Portfolio + Interview | `Multi-Agent Literature Extraction System` | 达到可 clone、可运行、可评估、可答辩的求职作品水平 |
+
+### 晋级规则
+
+- Level Gate 是**硬门槛**，不是“看完章节”。
+- 任一 Gate 未通过：先修复失败项，再进入下一级。
+- 每次验收都必须保留：测试结果、失败样例、Trace/事件记录、复盘文档。
+- 所有“提升”必须有 baseline；没有对照实验，不允许宣称多 Agent 更优。
+
+---
+
+## 2. 每天固定执行模板（≤3 h）
 
 ```text
-30 min   不看资料，口述本周核心概念
-45 min   从空文件重写关键代码
-30 min   跑验收测试
-15 min   写 failure log
---------------------------------
-总计      2 h 左右
+35–50 min   阅读指定页面，只做问题导向笔记
+80–100 min  独立编码 / 改造主项目
+25–35 min   测试、故障注入、Trace 检查
+10–20 min   写复盘：今天的架构决策与失败
+--------------------------------------
+总计         2 h 30 min – 3 h
 ```
 
-建议建立固定仓库：
+### 每天必须留下的最小证据
+
+1. 一个 commit。
+2. 一个可运行产出或可检验笔记。
+3. 至少一个测试 / 故障注入 / 闭卷口述结果。
+4. `daily-log.md` 追加 3 行：**学到什么、失败什么、下一步验证什么**。
+
+---
+
+## 3. 建议仓库结构
 
 ```text
 agent-engineering-roadmap/
 ├── 00-notes/
 ├── 01-mini-agent-loop/
-├── 02-single-agent-extractor/
-├── 03-langgraph-extractor/
-├── 04-multi-agent-extractor/
-├── 05-evaluation/
-├── 06-mcp-server/
-├── 07-production-app/
+├── 02-agent-framework/
+├── 03-single-agent/
+├── 04-langgraph-extractor/
+├── 05-multi-agent/
+├── 06-evaluation/
+├── 07-context-mcp/
+├── 08-production-app/
+├── datasets/
+├── reports/
+├── reviews/
+├── level-gates/
+├── portfolio/
 └── README.md
 ```
 
 ---
 
-# Level 0 — Agent 思维与无框架 Agent Loop
+# Level 0 — Agent 思维 + 经典范式 + 无框架 Loop
 
-## 周期
+**周期：** Week 1–2  
+**Level 主要产出：** `mini-agent + 20-case eval`  
+**晋级本质：** 理解 ReAct / Plan-and-Solve / Reflection，并能手写受控 Agent Loop
 
-Week 1–2
+## Week 1 — Agent 边界与经典范式
 
-## 本 Level 的目标
+### Day 1 — Agent、Workflow、Chatbot：先学会“不用 Agent”
 
-你必须先脱离 LangChain/LangGraph，真正理解：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- Agent 与 Chatbot 的差异
-- Workflow 与 Agent 的边界
-- LLM 如何选择 Tool
-- Action / Observation 如何进入下一轮
-- 为什么 Agent 会死循环
-- 如何设置预算、终止、重试和降级
-- 为什么“代码兜底”不是附属模块，而是 Agent 架构的一部分
+**学习网站**
 
-## 主要官方资源
+- [Hello-Agents Ch1](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter1/%E7%AC%AC%E4%B8%80%E7%AB%A0%20%E5%88%9D%E8%AF%86%E6%99%BA%E8%83%BD%E4%BD%93.md)
+- [Anthropic: Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)
 
-- Hugging Face Agents Course：<https://huggingface.co/learn/agents-course/unit1/introduction>
-- HF Agents Course GitHub：<https://github.com/huggingface/agents-course>
-- LangGraph：Workflows and Agents：<https://docs.langchain.com/oss/python/langgraph/workflows-agents>
-- LangChain Tools：<https://docs.langchain.com/oss/python/langchain/tools>
-- LangChain Structured Output：<https://docs.langchain.com/oss/python/langchain/structured-output>
-- HF smolagents Introduction：<https://huggingface.co/learn/agents-course/unit2/smolagents/introduction>
-- HF Code Agents：<https://huggingface.co/learn/agents-course/unit2/smolagents/code_agents>
+**今天学什么**
 
----
+- 精读 Ch1 中“智能体定义、环境、行动、自主性、LLM Agent 新范式”相关部分。
+- 区分 chatbot / deterministic workflow / agent；理解“自主决策”不等于“无限自治”。
+- 用你的真实任务做架构判断，而不是背定义。
 
-## Week 1：先建立 Agent 心智模型
+**今天动手做什么**
 
-### Day 1 — 什么问题值得用 Agent？
-
-**学习链接**
-
-- <https://huggingface.co/learn/agents-course/unit1/introduction>
-- <https://docs.langchain.com/oss/python/langgraph/workflows-agents>
-
-**学习内容**
-
-- Agent、Workflow、Chatbot 三者区别。
-- 固定流程与动态决策的边界。
-- 为 10 个任务判断：普通函数 / Workflow / Agent。
+- 对 12 个任务分类：普通函数、Workflow、Single Agent、Multi-Agent。
+- 必须包含：文献下载、字段抽取、单位归一化、表格解析、跨段落证据检索、多目标配方优化。
 
 **当天产出**
 
-创建 `00-notes/day01-agent-vs-workflow.md`，至少分析：
+- `00-notes/day01-agent-boundary.md`
 
-- 文献字段抽取
-- 文献下载
-- 表格解析
-- 单位归一化
-- 新闻聚合
-- 旅行规划
-- 邮件助手
-- 自动下单
-- 代码修复
-- 多目标配方优化
+**验收测试 / 通过标准**
 
-对每个任务给出架构选择和理由。
+- [ ] 闭卷用 3 分钟解释四类系统差异。
+- [ ] 12 个任务中至少 10 个能给出“为什么不用更复杂架构”的理由。
+- [ ] 对“文献字段抽取”写出一个可证伪的 Agent 适用假设。
 
----
+### Day 2 — 从 Agent 历史中理解“状态、规划、效用”为什么出现
 
-### Day 2 — Agent Loop：Observe → Decide → Act
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习链接**
+**学习网站**
 
-- <https://huggingface.co/learn/agents-course/unit1/introduction>
-- <https://github.com/huggingface/agents-course>
+- [Hello-Agents Ch2](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter2/%E7%AC%AC%E4%BA%8C%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E5%8F%91%E5%B1%95%E5%8F%B2.md)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
 
-**学习内容**
+**今天学什么**
 
-画出最小闭环：
+- 快速阅读 Ch2，不追求历史细节；重点抓“上一代范式解决什么问题，又产生什么新问题”。
+- 理解反射式、基于模型、目标式、效用式、学习型 Agent。
+- 把“内部状态 / 目标 / 规划 / 反馈”映射到现代 LLM Agent。
 
-```text
-User Goal
-   ↓
-Model Decision
-   ↓
-Tool Call / Final Answer
-   ↓
-Observation
-   ↓
-Model Decision
-   ↓
-...
-```
+**今天动手做什么**
 
-**当天编码**
-
-不用任何 Agent 框架，手写：
-
-```python
-while step < max_steps:
-    decision = model(messages, tools)
-    if decision.is_final:
-        break
-    observation = execute_tool(decision.tool_call)
-    messages.append(observation)
-```
-
-先允许工具是 mock。
+- 画一张“传统 Agent → LLM Agent”能力演化图。
+- 为文献抽取系统写 5 个状态变量和 3 个目标函数示例。
 
 **当天产出**
 
-`01-mini-agent-loop/loop_v0.py`
+- `00-notes/day02-agent-evolution.md` + 1 张 Mermaid 图
 
----
+**验收测试 / 通过标准**
 
-### Day 3 — Tool Contract，而不是“给模型几个函数”
+- [ ] 不看资料解释：为什么仅靠 prompt 不等于 Agent。
+- [ ] 能说明“状态”和“聊天历史”为什么不是同一概念。
 
-**学习链接**
+### Day 3 — LLM 基础只补 Agent 相关缺口：结构化输出与工具选择
 
-- <https://docs.langchain.com/oss/python/langchain/tools>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习内容**
+**学习网站**
 
-每个 Tool 写清：
+- [Hello-Agents Ch3](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter3/%E7%AC%AC%E4%B8%89%E7%AB%A0%20%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%9F%BA%E7%A1%80.md)
+- [LangChain Structured Output](https://docs.langchain.com/oss/python/langchain/structured-output)
 
-- name
-- description
-- args schema
-- return schema
-- exceptions
-- timeout
-- side effect
-- idempotency
+**今天学什么**
 
-**当天编码**
+- Ch3 只快速读：LLM 局限、提示、API 调用；跳过你已掌握的 Transformer 细节。
+- 理解自由文本、JSON、Schema-validated output 的可靠性差异。
+- 理解模型“选择工具”和代码“执行工具”是两层职责。
 
-实现 3 个材料文献工具：
+**今天动手做什么**
 
-```text
-search_section(query)
-get_paragraph(section_id)
-normalize_unit(value, source_unit, target_unit)
-```
+- 定义 Pydantic 模型 `ExtractionResult`：字段值、单位、证据、置信度、缺失原因。
+- 手写 10 个非法输出样例，验证 Schema 能拒绝它们。
 
 **当天产出**
 
-`tool_contracts.md` + 单元测试。
+- `01-mini-agent-loop/schemas.py` + `tests/test_schema.py`
 
----
+**验收测试 / 通过标准**
 
-### Day 4 — Structured Output 与 Schema
+- [ ] `pytest` 至少 10 条非法样例全部被拒绝。
+- [ ] 不能用“让模型自觉输出 JSON”替代验证。
 
-**学习链接**
+### Day 4 — ReAct：第一次真正建立 Agent Loop 思维
 
-- <https://docs.langchain.com/oss/python/langchain/structured-output>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习内容**
+**学习网站**
 
-- JSON 不是“看起来像 JSON”。
-- Pydantic Schema。
-- provider-native structured output 与 tool-based structured output 的概念差异。
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+- [OpenAI Agent Building Track](https://developers.openai.com/tracks/building-agents)
 
-**当天编码**
+**今天学什么**
 
-定义：
+- 精读 Ch4 的 ReAct 部分：Reason/Act/Observe 的信息流。
+- 区分内部推理、可执行 Action、环境 Observation。
+- 理解 Observation 必须改变下一步决策，否则 Loop 没有意义。
 
-```python
-class Evidence(BaseModel):
-    text: str
-    section: str | None
+**今天动手做什么**
 
-class ExtractedField(BaseModel):
-    field_name: str
-    value: float | str | None
-    unit: str | None
-    evidence: list[Evidence]
-    confidence: float
-```
+- 不用 Agent 框架，写 mock ReAct loop。
+- 工具：`search_section`、`get_paragraph`、`normalize_unit`。
+- 保存每一步 event，而不是只打印最终答案。
 
 **当天产出**
 
-20 条构造输入，验证非法字段、非法单位、空证据如何失败。
+- `01-mini-agent-loop/react_loop_v0.py`
 
----
+**验收测试 / 通过标准**
 
-### Day 5 — ReAct 思想与 Observation
+- [ ] 给定“抽取 28d 抗压强度”任务，必须出现至少一次 Tool → Observation → Next Decision。
+- [ ] Trace 中每步有 `step/type/input/output/error`。
 
-**学习链接**
+### Day 5 — Plan-and-Solve：什么时候应先规划，再执行
 
-- <https://huggingface.co/learn/agents-course/unit1/introduction>
-- <https://huggingface.co/learn/agents-course/unit2/smolagents/introduction>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习内容**
+**学习网站**
 
-重点不是背 “ReAct” 名词，而是理解：
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+- [OpenAI Practical Guide](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
 
-- 当前信息不足时为什么要 Action？
-- Observation 如何改变下一步？
-- 工具返回太长会怎样？
-- 什么时候不应继续思考？
+**今天学什么**
 
-**当天编码**
+- 精读 Plan-and-Solve 部分。
+- 理解“一次性生成计划”与“逐步 ReAct”的差异。
+- 识别长任务中的 plan drift、计划过细、计划失效。
 
-给 `loop_v0.py` 增加：
+**今天动手做什么**
 
-- observation truncation
-- max steps
-- repeated action detection
-- final answer condition
-
----
-
-### Day 6 — 故障注入
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langgraph/workflows-agents>
-
-**学习内容**
-
-主动制造：
-
-- 工具超时
-- 参数错误
-- 空结果
-- 重复调用
-- 模型返回不存在的 Tool
+- 实现 `planner.py`，输出结构化步骤列表。
+- 实现最小 executor，逐步执行并记录 `planned_step_id`。
+- 用“抽取配方 + 养护 + 3/7/28d 强度”做任务。
 
 **当天产出**
 
-`failure_log_week1.md`，每个失败写：
+- `01-mini-agent-loop/plan_solve_v0.py`
 
-```text
-现象
-根因
-检测方式
-恢复策略
-是否应重试
-```
+**验收测试 / 通过标准**
 
----
+- [ ] 计划必须可机读且每步有完成状态。
+- [ ] 中途注入“未找到养护温度”，系统必须标记 blocked/replan，而非伪造。
 
-### Day 7 — Week 1 闭卷复盘
+### Day 6 — Reflection：反思不是“再问一次模型”
 
-**不新增框架。**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**任务**
+**学习网站**
 
-1. 不看笔记，画 Agent Loop。
-2. 用 3 分钟解释 Workflow vs Agent。
-3. 从空文件写一个 3-tool Agent Loop。
-4. 为每次运行记录 `step_count / tool_calls / latency / result`。
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
 
-**通过线**
+**今天学什么**
 
-你不能再把 Agent 解释成“能调用工具的 LLM”。
+- 精读 Reflection 部分。
+- 掌握 Execute → Critique → Refine。
+- 理解 Critic 的评价维度必须显式，否则只是昂贵重写。
 
----
+**今天动手做什么**
 
-## Week 2：从原理过渡到轻量框架，并建立代码兜底观
-
-### Day 8 — smolagents：看框架如何包装 Loop
-
-**学习链接**
-
-- <https://huggingface.co/learn/agents-course/unit2/smolagents/introduction>
-- <https://github.com/huggingface/smolagents>
-
-**学习内容**
-
-对照自己 Day 2 的循环，定位：
-
-- Model
-- Tool
-- Agent
-- Memory / Log
-- Stop
+- 实现 extractor → critic → revise。
+- Critic 输出固定 schema：事实性、证据充分性、单位一致性、遗漏。
+- 构造一个故意错误的 52.4 MPa→52.4 GPa 样例。
 
 **当天产出**
 
-写 `framework_mapping.md`：框架每个抽象对应你手写 Loop 的哪一部分。
+- `01-mini-agent-loop/reflection_v0.py`
 
----
+**验收测试 / 通过标准**
 
-### Day 9 — Code Agent 思维
+- [ ] Critic 必须定位单位错误并给出证据。
+- [ ] 若初稿正确，Refine 不得无理由改值。
 
-**学习链接**
+### Day 7 — Week 1 闭卷 Gate：用自己的语言重建经典范式
 
-- <https://huggingface.co/learn/agents-course/unit2/smolagents/code_agents>
+**时间预算：** 闭卷 60 min｜编码 70 min｜测试 30 min｜复盘 20 min（≈3 h）
 
-**学习内容**
+**学习网站**
 
-- JSON Tool Call 与 Code Action 的差别。
-- 代码执行为什么强，也为什么危险。
-- sandbox、allowlist、timeout。
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
 
-**当天编码**
+**今天学什么**
 
-写一个只允许：
+- 不新增内容，只复盘 Agent 边界、ReAct、Plan-and-Solve、Reflection。
 
-- 加减乘除
-- 单位换算
-- 简单统计
+**今天动手做什么**
 
-的安全执行器原型。
-
----
-
-### Day 10 — “LLM 抽取 + 代码兜底”第一版
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/structured-output>
-
-**当天编码**
-
-建立：
-
-```text
-LLM extraction
-   ↓
-Pydantic validation
-   ↓
-unit normalization
-   ↓
-cross-field rules
-   ↓
-accept / retry / manual_review
-```
-
-规则示例：
-
-- `water_binder_ratio` 不允许负数。
-- 抗压强度单位归一成 MPa。
-- 养护龄期必须附带 d/h。
-- 数值没有 Evidence 时降置信度。
-
----
-
-### Day 11 — 终止策略与预算策略
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langgraph/workflows-agents>
-
-**当天编码**
-
-增加：
-
-```text
-max_steps
-max_tool_calls
-max_retries_per_tool
-wall_clock_timeout
-estimated_cost_budget
-same_action_limit
-```
+- 关闭资料，画 4 张架构图。
+- 从空文件重写 60–120 行最小 Agent Loop。
+- 录制 8 分钟口述：为什么你的文献抽取不应一开始就多 Agent。
 
 **当天产出**
 
-`budget_policy.md`
+- `reviews/week01-review.md` + `01-mini-agent-loop/closed_book_loop.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 代码支持 tool call、observation、max_steps、final answer。
+- [ ] 口述必须比较 3 种范式的适用条件。
+- [ ] 任一项失败则 Week 1 不通过。
 
 ---
 
-### Day 12 — 设计你的文献抽取 Agent V0
+## Week 2 — 受控 Agent Loop 与代码兜底
 
-**学习链接**
+### Day 8 — Tool Contract：工具是受约束接口，不是函数列表
 
-- <https://github.com/langchain-ai/agents-from-scratch>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**任务**
+**学习网站**
 
-只画架构，不急着堆代码：
+- [LangChain Tools](https://docs.langchain.com/oss/python/langchain/tools)
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
 
-```text
-Input text
-  ↓
-Field request
-  ↓
-Search evidence
-  ↓
-Extract
-  ↓
-Validate
-  ↓
-Retry / Accept / Human Review
-```
+**今天学什么**
 
-明确哪些步骤：
+- 学习 name、description、args schema、return schema、error semantics、side effects、idempotency。
+- 理解工具描述会影响模型路由，但不能替代运行时校验。
 
-- 确定性
-- LLM 决策
-- Tool
-- Validator
+**今天动手做什么**
 
----
-
-### Day 13 — 20 条小型测试集
-
-**任务**
-
-手工建立 `tests/data/extraction_cases.jsonl`：
-
-- 5 条简单正文
-- 5 条单位混乱
-- 3 条缺失字段
-- 3 条冲突数据
-- 2 条表格转文本
-- 2 条故意诱导幻觉
+- 为 5 个文献工具写 Tool Spec。
+- 实现统一 `ToolResult(ok,data,error,retryable,latency_ms)`。
 
 **当天产出**
 
-初始 baseline：
+- `01-mini-agent-loop/tools/` + `docs/tool-contracts.md`
 
-- schema validity
-- field exact match
-- evidence presence
-- tool calls
+**验收测试 / 通过标准**
 
----
+- [ ] 每个工具至少 3 个失败测试。
+- [ ] 副作用工具必须显式标注。
+- [ ] 未知工具名不得直接 `getattr` 执行。
 
-### Day 14 — Level 0 验收
+### Day 9 — Agent Loop 工程化：停止、预算、重复调用检测
 
-## Level 0 硬性验收标准
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-必须全部满足：
+**学习网站**
 
-- [ ] 能在 5 分钟内解释 Agent、Workflow、Tool Calling 的区别。
-- [ ] 不用 LangChain/LangGraph，实现一个最小 Agent Loop。
-- [ ] 至少 3 个工具，具有参数校验和异常处理。
-- [ ] 有 `max_steps` 和至少 2 种异常停止策略。
-- [ ] 能检测重复 Action。
-- [ ] 结构化输出经过 Pydantic 验证。
-- [ ] 有 20 条测试输入。
-- [ ] 能明确指出系统中哪些部分应该由代码兜底。
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+- [OpenAI Practical Guide](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
 
-**面试式验收题**
+**今天学什么**
 
-> “为什么不是所有复杂任务都应该用 Agent？你的文献抽取系统哪里应该是 Workflow，哪里应该是 Agent？”
+- 理解 max_steps、timeout、token/cost budget、duplicate-call detection、circuit breaker。
+- 把“结束”视为系统策略，而非模型自觉。
 
-要求你能连续回答 5 分钟，并画图。
+**今天动手做什么**
 
----
-
-# Level 1 — LangChain v1 单 Agent 工程能力
-
-## 周期
-
-Week 3–4
-
-## 本 Level 的目标
-
-掌握现代 LangChain 的最小必要知识：
-
-- `create_agent`
-- Models / Messages
-- Tools
-- Structured Output
-- Middleware
-- Streaming
-- Short-term Memory
-- Context Engineering 初步
-
-**原则：不学习大量旧版 Chain API，不背历史包袱。**
-
-## 主要官方资源
-
-- LangChain Overview：<https://docs.langchain.com/oss/python/langchain/overview>
-- Agents：<https://docs.langchain.com/oss/python/langchain/agents>
-- Tools：<https://docs.langchain.com/oss/python/langchain/tools>
-- Structured Output：<https://docs.langchain.com/oss/python/langchain/structured-output>
-- Context Engineering：<https://docs.langchain.com/oss/python/langchain/context-engineering>
-- Short-term Memory：<https://docs.langchain.com/oss/python/langchain/short-term-memory>
-- LangGraph 101 Repo：<https://github.com/langchain-ai/langgraph-101>
-
----
-
-## Week 3：单 Agent 基础
-
-### Day 15 — LangChain v1 心智模型
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/overview>
-- <https://docs.langchain.com/oss/python/langchain/agents>
-
-**任务**
-
-用自己的话解释：
-
-```text
-Model + Prompt + Tools + Middleware + State = Agent Harness
-```
-
-**当天编码**
-
-做一个最小 `create_agent`，只有一个 calculator tool。
-
----
-
-### Day 16 — Tools 重构
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/tools>
-
-**任务**
-
-把 Level 0 的 3 个材料工具迁移为 LangChain Tools。
-
-**要求**
-
-- 类型注解完整
-- docstring 精确
-- Tool 输入不允许“一坨字符串”
-- 测试错误参数
-
----
-
-### Day 17 — Structured Output 正式接入
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/structured-output>
-
-**任务**
-
-将抽取结果改成：
-
-```text
-PaperExtraction
-├── paper_id
-├── fields[]
-│   ├── name
-│   ├── value
-│   ├── unit
-│   ├── evidence[]
-│   └── confidence
-└── warnings[]
-```
-
-**验收**
-
-20 条测试中 schema validity ≥ 95%。
-
----
-
-### Day 18 — Streaming 与可观察的 Agent
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/agents>
-
-**任务**
-
-输出用户可见进度事件：
-
-```text
-searching evidence...
-found 3 candidate paragraphs
-extracting...
-validating units...
-```
-
-**思考**
-
-区分：
-
-- 用户进度
-- 内部 Trace
-- 模型私有推理
-
----
-
-### Day 19 — Short-term Memory
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/short-term-memory>
-
-**任务**
-
-实现同一 thread：
-
-```text
-用户：抽取 28d 强度
-用户：再把 7d 的也加上
-```
-
-第二轮能保留任务上下文。
-
----
-
-### Day 20 — Context Engineering 初步
-
-**学习链接**
-
-- <https://docs.langchain.com/oss/python/langchain/context-engineering>
-
-**任务**
-
-比较 3 种上下文：
-
-1. 整篇论文塞进去
-2. top-k 段落
-3. section-aware evidence package
-
-记录：
-
-- token 量
-- 命中率
-- 幻觉
-- 延迟
-
----
-
-### Day 21 — Week 3 复盘
-
-**任务**
-
-从空目录创建：
-
-```text
-single_agent/
-├── schemas.py
-├── tools.py
-├── agent.py
-├── validators.py
-└── tests/
-```
-
-不允许所有代码塞一个 notebook。
-
----
-
-## Week 4：从 Demo 到可测试单 Agent
-
-### Day 22 — Middleware
-
-**学习链接**
-
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/101/102_middleware.ipynb>
-
-**任务**
-
-理解 Middleware 可以做：
-
-- 动态 Prompt
-- Tool 控制
-- Guardrail
-- HITL 前置
-- 上下文裁剪
-
-实现一个“低置信度时增加验证指令”的 middleware 原型。
-
----
-
-### Day 23 — LangGraph 101 Notebook 预习
-
-**学习链接**
-
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/101/101_langchain_langgraph.ipynb>
-
-**任务**
-
-完整运行 Notebook，但每一段回答：
-
-> “这段代码若不用框架，我要自己实现什么？”
-
----
-
-### Day 24 — Agents From Scratch：Agent 架构
-
-**学习链接**
-
-- <https://github.com/langchain-ai/agents-from-scratch/blob/main/notebooks/agent.ipynb>
-
-**任务**
-
-研究 email triage 思路，映射到文献：
-
-```text
-Email triage      → Document / Field triage
-Response agent    → Extraction agent
-Calendar tools    → Evidence / Parser tools
-```
+- 给 Loop 增加预算对象和重复调用哈希。
+- 构造模型连续 4 次调用相同工具的故障。
 
 **当天产出**
 
-`email_to_paper_mapping.md`
+- `01-mini-agent-loop/runtime.py`
 
+**验收测试 / 通过标准**
+
+- [ ] 重复调用在阈值内被停止。
+- [ ] 超时返回 typed error。
+- [ ] 达到预算时保留 partial result，而非崩溃。
+
+### Day 10 — 错误处理：Retry、Fallback、Escalation 不是一回事
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Middleware](https://docs.langchain.com/oss/python/langchain/middleware/overview)
+- [OpenAI Practical Guide](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
+
+**今天学什么**
+
+- 区分 retryable / non-retryable。
+- 区分同工具重试、换工具 fallback、请求人工 escalation。
+- 理解指数退避思想，但今天不追求完整库。
+
+**今天动手做什么**
+
+- 实现错误分类器。
+- 让 `search_section` 超时→重试；schema error→修复一次；权限错误→直接失败。
+
+**当天产出**
+
+- `01-mini-agent-loop/errors.py` + `tests/test_error_policy.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 至少 6 类错误各有明确策略。
+- [ ] 禁止所有异常统一 `except Exception: retry`。
+
+### Day 11 — “概率性核心 + 确定性外壳”：代码兜底第一版
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+- [LangChain Structured Output](https://docs.langchain.com/oss/python/langchain/structured-output)
+
+**今天学什么**
+
+- 理解哪些任务适合 LLM：语义定位、歧义判断、证据解释。
+- 哪些必须确定性：Schema、单位换算、范围、数据库约束。
+
+**今天动手做什么**
+
+- 实现 `DeterministicValidator`：MPa/GPa、百分比、龄期、数值范围。
+- 把 LLM 抽取结果接到 validator。
+
+**当天产出**
+
+- `01-mini-agent-loop/validators.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 故意输入 52.4 GPa 抗压强度时被告警。
+- [ ] `w/b=-0.2`、`age=29d` 等异常被定位到字段级。
+
+### Day 12 — 文献抽取 V0：第一次形成端到端 Agent
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+
+**今天学什么**
+
+- 回顾经典范式，选择你的 V0：建议 ReAct + deterministic validation。
+
+**今天动手做什么**
+
+- 输入一段真实或手写论文文本。
+- 完成 section search → evidence fetch → extract → validate → final JSON。
+- 所有字段保留 evidence span。
+
+**当天产出**
+
+- `01-mini-agent-loop/paper_agent_v0.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 单命令运行。
+- [ ] 至少抽取 5 个字段。
+- [ ] 每个非空字段必须有 evidence。
+- [ ] Validator 失败时不得静默通过。
+
+### Day 13 — 建立第一个 Eval Set：从现在起禁止只看 Demo
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangSmith Evaluation Concepts](https://docs.langchain.com/langsmith/evaluation-concepts)
+- [Hello-Agents Ch12](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter12/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E6%80%A7%E8%83%BD%E8%AF%84%E4%BC%B0.md)
+
+**今天学什么**
+
+- 快速理解 dataset / example / evaluator。
+- 今天不学完整评估框架，只建立“固定题集”习惯。
+
+**今天动手做什么**
+
+- 制作 20 条 JSONL：正常、缺失、单位冲突、跨段落、诱导性文本。
+- 定义 expected fields 和 expected evidence keywords。
+
+**当天产出**
+
+- `datasets/v0_eval_20.jsonl`
+
+**验收测试 / 通过标准**
+
+- [ ] 20 条数据能被脚本加载。
+- [ ] 至少 30% 是失败/边界样例。
+- [ ] 禁止全是自己最容易的样例。
+
+### Day 14 — Level 0 验收：Agent 思维与无框架 Loop
+
+**时间预算：** 闭卷 40 min｜运行评测 60 min｜故障分析 50 min｜口述 20 min（≈2 h 50 min）
+
+**学习网站**
+
+- [Hello-Agents Ch1](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter1/%E7%AC%AC%E4%B8%80%E7%AB%A0%20%E5%88%9D%E8%AF%86%E6%99%BA%E8%83%BD%E4%BD%93.md)
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+
+**今天学什么**
+
+- 只验收，不新增知识。
+
+**今天动手做什么**
+
+- 闭卷解释 10 个核心概念。
+- 跑 20 条 Eval。
+- 对 3 个失败 case 写 root cause。
+- 从空白图重画文献抽取 Agent V0 数据流。
+
+**当天产出**
+
+- `level-gates/level0.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 20 条中 Schema valid rate=100%。
+- [ ] Agent 无无限循环。
+- [ ] 能解释 ReAct/Plan/Reflection 的选择边界。
+- [ ] 能指出至少 3 个“此处不该用 LLM”的位置。
+
+---
+
+# Level 1 — 自研 Agent Harness + LangChain v1
+
+**周期：** Week 3–4  
+**Level 主要产出：** `自研 mini framework + single-agent extractor v1`  
+**晋级本质：** 既能造轮子，又能解释现代 Agent harness 的抽象
+
+## Week 3 — 从零构建 Agent Harness
+
+### Day 15 — HelloAgents 框架总览：先读架构，再读代码
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+
+**今天学什么**
+
+- 精读 Ch7 的设计目标、目录结构、核心抽象。
+- 重点观察 Agent、LLM、Message、Tool、Registry 的依赖方向。
+- 批判性理解“万物皆 Tool”：学习价值与工程局限。
+
+**今天动手做什么**
+
+- 画出 HelloAgents 依赖图。
+- 写 ADR-001：为什么你的教学框架不直接复制 HelloAgents。
+
+**当天产出**
+
+- `02-agent-framework/docs/architecture.md` + `adr/001-framework-scope.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 能解释 LLMClient 与 Agent 分离的原因。
+- [ ] 能指出“Memory/RAG 都当 Tool”至少 2 个局限。
+
+### Day 16 — Message 与 Event Model：先定义系统语言
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+
+**今天学什么**
+
+- 学习 Message 抽象与消息角色。
+- 额外区分 message 与 runtime event；不要把日志塞进 messages。
+
+**今天动手做什么**
+
+- 实现 `Message`、`ToolCall`、`ToolObservation`、`RunEvent`。
+- 加入序列化/反序列化。
+
+**当天产出**
+
+- `02-agent-framework/core/message.py` + `core/events.py`
+
+**验收测试 / 通过标准**
+
+- [ ] round-trip serialization 测试通过。
+- [ ] Event 可记录但不进入模型上下文。
+
+### Day 17 — LLM Adapter：模型供应商不能污染 Agent 核心
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+- [LangChain Overview](https://docs.langchain.com/oss/python/langchain/overview)
+
+**今天学什么**
+
+- 理解 adapter/interface。
+- 定义模型返回的统一 `ModelDecision`。
+
+**今天动手做什么**
+
+- 实现 `BaseLLM` protocol 和 `MockLLM`。
+- 可选接一个真实 provider，但测试默认不能依赖 API。
+
+**当天产出**
+
+- `02-agent-framework/core/llm.py`
+
+**验收测试 / 通过标准**
+
+- [ ] MockLLM 能脚本化返回 tool call / final。
+- [ ] Agent 测试无 API key 也能运行。
+
+### Day 18 — Tool Registry 与安全执行边界
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+- [LangChain Tools](https://docs.langchain.com/oss/python/langchain/tools)
+
+**今天学什么**
+
+- 学习工具注册、schema 暴露、执行分离。
+- 理解 registry 是 capability boundary。
+
+**今天动手做什么**
+
+- 实现装饰器或显式注册 API。
+- 重复名称拒绝注册；参数校验；白名单执行。
+
+**当天产出**
+
+- `02-agent-framework/tools/registry.py` + `executor.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 未知工具拒绝。
+- [ ] 非法参数不进入函数体。
+- [ ] 5 个工具可枚举出 schema。
+
+### Day 19 — BaseAgent：把 Loop 从脚本升级成可复用 Harness
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+
+**今天学什么**
+
+- 学习 BaseAgent 生命周期。
+- 明确 runtime config、messages、tools、budget、events 的归属。
+
+**今天动手做什么**
+
+- 实现 `BaseAgent.run()` 和 hooks：before_model / after_model / before_tool / after_tool。
+
+**当天产出**
+
+- `02-agent-framework/agents/base.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 最大步数生效。
+- [ ] 任一步异常生成 event。
+- [ ] 至少 4 个 hooks 可独立测试。
+
+### Day 20 — 实现 ReActAgent，并与 Week 1 版本对照
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+
+**今天学什么**
+
+- 比较教学脚本与框架抽象的差异。
+
+**今天动手做什么**
+
+- 基于 BaseAgent 实现 ReActAgent。
+- 同一 20-case eval 同时跑旧版与新版。
+
+**当天产出**
+
+- `02-agent-framework/agents/react.py` + `reports/react_ablation.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 功能不低于旧版。
+- [ ] 新增框架没有改变 expected output schema。
+- [ ] 报告中列出抽象收益和复杂度成本。
+
+### Day 21 — Week 3 Gate：闭卷重建最小 Agent Harness
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+
+**今天学什么**
+
+- 不新增知识。
+
+**今天动手做什么**
+
+- 从空目录重建最小 `Message → LLM → ToolRegistry → AgentLoop`。
+- 只允许查看自己的接口文档，不看实现。
+
+**当天产出**
+
+- `reviews/week03-from-scratch/`
+
+**验收测试 / 通过标准**
+
+- [ ] ≤180 行核心代码跑通 5 case。
+- [ ] 能口述 tool schema 如何从注册到执行。
+- [ ] 能定位 stop condition 属于哪一层。
+
+---
+
+## Week 4 — LangChain v1 单 Agent 工程
+
+### Day 22 — LangChain v1 心智模型：Agent = Model + Harness
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Overview](https://docs.langchain.com/oss/python/langchain/overview)
+- [LangChain Agents](https://docs.langchain.com/oss/python/langchain/agents)
+
+**今天学什么**
+
+- 只学当前 v1 抽象：model、tools、create_agent、middleware、state。
+- 把官方抽象映射到你 Week 3 自己写的组件。
+
+**今天动手做什么**
+
+- 写“自研框架 ↔ LangChain v1”映射表。
+- 跑最小 `create_agent` 示例。
+
+**当天产出**
+
+- `03-single-agent/langchain_mapping.md` + `hello_agent.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 映射表至少 8 项。
+- [ ] 能解释 LangChain 替你封装了哪些 Loop 逻辑。
+
+### Day 23 — LangChain Tools：重构你的文献工具
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Tools](https://docs.langchain.com/oss/python/langchain/tools)
+
+**今天学什么**
+
+- 学习 `@tool`、schema、ToolRuntime 的边界。
+- 理解哪些参数对模型隐藏。
+
+**今天动手做什么**
+
+- 把 5 个 V0 工具迁移到 LangChain tools。
+- 保留原确定性 validator。
+
+**当天产出**
+
+- `03-single-agent/tools.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 工具 schema 可打印检查。
+- [ ] runtime-only 参数不暴露给模型。
+- [ ] 原工具单测继续通过。
+
+### Day 24 — Structured Output：生产抽取不接受自由文本 JSON
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Structured Output](https://docs.langchain.com/oss/python/langchain/structured-output)
+
+**今天学什么**
+
+- 学习 response_format 与结构化响应。
+- 理解 provider-native 与 tool strategy 的概念差异。
+
+**今天动手做什么**
+
+- 创建 `PaperExtraction` schema。
+- 输出 composition/properties/experiment/evidence/warnings。
+
+**当天产出**
+
+- `03-single-agent/schemas.py` + `extractor_v1.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 20-case Schema valid rate=100%。
+- [ ] 缺失字段用 `null + missing_reason`，禁止捏造。
+
+### Day 25 — Short-term Memory 与 State：不要把一切塞进 messages
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Short-term Memory](https://docs.langchain.com/oss/python/langchain/short-term-memory)
+
+**今天学什么**
+
+- 区分消息历史、运行状态、自定义 state 字段。
+- 理解 thread-scoped state。
+
+**今天动手做什么**
+
+- 增加 `paper_id`、`retrieved_sections`、`validation_errors` 状态。
+- 让工具可读取必要 state。
+
+**当天产出**
+
+- `03-single-agent/state.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 两个 paper/thread 的状态不串。
+- [ ] 工具只读取必要字段。
+
+### Day 26 — Middleware：横切逻辑不应散落在 Prompt
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Middleware](https://docs.langchain.com/oss/python/langchain/middleware/overview)
+- [LangChain Context Engineering](https://docs.langchain.com/oss/python/langchain/context-engineering)
+
+**今天学什么**
+
+- 学习 hook/lifecycle 思维。
+- 识别 logging、retry、early stop、context shaping。
+
+**今天动手做什么**
+
+- 实现至少 2 个 middleware：运行预算、模型调用日志。
+- 可选：高风险工具拦截。
+
+**当天产出**
+
+- `03-single-agent/middleware.py`
+
+**验收测试 / 通过标准**
+
+- [ ] middleware 可单独禁用。
+- [ ] 禁用后核心 Agent 不改代码。
+- [ ] Budget 超限有明确终止原因。
+
+### Day 27 — 单 Agent Paper Extractor v1：形成第一个可投作品雏形
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangChain Agents](https://docs.langchain.com/oss/python/langchain/agents)
+- [LangChain RAG](https://docs.langchain.com/oss/python/langchain/rag)
+
+**今天学什么**
+
+- 理解 agentic retrieval 与固定 retrieval workflow 的差别。
+
+**今天动手做什么**
+
+- 完成 `paper-extractor-agent-v1`：检索段落→抽取→验证→输出。
+- 加入 CLI。
+
+**当天产出**
+
+- `03-single-agent/` 完整可运行目录
+
+**验收测试 / 通过标准**
+
+- [ ] `python -m ... --input sample.txt` 可运行。
+- [ ] 20-case eval 有指标报告。
+- [ ] README 包含架构图、限制和失败案例。
+
+### Day 28 — Level 1 验收：会造轮子，也会用现代 Harness
+
+**时间预算：** 闭卷 40 min｜A/B 评测 80 min｜Trace 分析 40 min｜总结 15 min（≈2 h 55 min）
+
+**学习网站**
+
+- [Hello-Agents Ch7](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter7/%E7%AC%AC%E4%B8%83%E7%AB%A0%20%E6%9E%84%E5%BB%BA%E4%BD%A0%E7%9A%84Agent%E6%A1%86%E6%9E%B6.md)
+- [LangChain Agents](https://docs.langchain.com/oss/python/langchain/agents)
+
+**今天学什么**
+
+- 只验收。
+
+**今天动手做什么**
+
+- 闭卷比较自研 Harness 与 LangChain v1。
+- 对 20-case 运行自研 ReAct、LangChain Agent 两组实验。
+- 解释 3 个失败 trace。
+
+**当天产出**
+
+- `level-gates/level1.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 能从模型 decision 追到 tool execution。
+- [ ] 结构化输出 100% 可解析。
+- [ ] 无框架与框架版都能运行。
+- [ ] 能说明何时不该继续维护自研框架。
+
 ---
+
+# Level 2 — LangGraph 状态化编排 + Persistence + HITL
+
+**周期：** Week 5–6  
+**Level 主要产出：** `paper-extraction-graph-v2`  
+**晋级本质：** 能构建可暂停、可恢复、可测试的 stateful agent
+
+## Week 5 — LangGraph StateGraph 与显式控制流
+
+### Day 29 — 为什么需要 LangGraph：从 Agent Loop 转向显式状态机
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
+- [Thinking in LangGraph](https://docs.langchain.com/oss/python/langgraph/thinking-in-langgraph)
+
+**今天学什么**
+
+- 理解 long-running、stateful、durable execution、HITL 的需求。
+- 区分高层 agent harness 与低层 orchestration runtime。
+
+**今天动手做什么**
+
+- 把 v1 extractor 的隐式流程画成 StateGraph。
+- 标出 deterministic nodes 与 agentic nodes。
+
+**当天产出**
+
+- `04-langgraph-extractor/design_v2.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 至少 6 个 node。
+- [ ] 每个 node 有单一职责。
+- [ ] 能解释为什么某一步不应是 Agent node。
+
+### Day 30 — State Schema：先设计状态，再写 Node
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Thinking in LangGraph](https://docs.langchain.com/oss/python/langgraph/thinking-in-langgraph)
+- [LangGraph Workflows + Agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
+
+**今天学什么**
+
+- 理解 state 是节点之间的契约。
+- 区分输入字段、中间字段、输出字段、审计字段。
+
+**今天动手做什么**
+
+- 定义 `ExtractionState`。
+- 包含 paper_id、goal、evidence、draft、validation、retry_count、status。
+
+**当天产出**
+
+- `04-langgraph-extractor/state.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 字段拥有明确 owner。
+- [ ] 禁止一个 `misc: dict` 承担所有内容。
+- [ ] 能解释 reducer/merge 冲突风险。
+
+### Day 31 — Node 设计：把节点做成可测函数
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangGraph Workflows + Agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 
-### Day 25 — Retry 不是无脑重复
+**今天学什么**
 
-**任务**
+- 学习 node 的输入输出边界。
+- 优先纯函数与依赖注入。
 
-实现失败分类：
+**今天动手做什么**
 
-```text
-transient_tool_error   → retry
-invalid_args           → repair args
-no_evidence            → broaden search
-schema_error           → structured retry
-conflicting_evidence   → manual review
-```
+- 实现 retrieve / extract / validate 三节点。
+- 模型调用封装为依赖。
 
-**要求**
+**当天产出**
 
-每种错误有不同恢复策略。
+- `04-langgraph-extractor/nodes.py`
 
----
+**验收测试 / 通过标准**
 
-### Day 26 — 单 Agent 基准测试
+- [ ] 3 个节点可独立单测。
+- [ ] Validator node 不调用 LLM。
+- [ ] 节点不直接修改全局变量。
 
-**学习链接**
+### Day 32 — Conditional Edge：把失败策略显式化
 
-- <https://docs.langchain.com/langsmith/evaluation-concepts>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**任务**
+**学习网站**
 
-将测试集扩至至少 40 条，记录：
+- [LangGraph Workflows + Agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 
-```text
-field accuracy
-schema validity
-evidence precision
-average tool calls
-average latency
-failure rate
-```
+**今天学什么**
 
----
+- 学习 routing function。
+- 理解 route 结果必须有限、可测。
 
-### Day 27 — 单 Agent 项目整理
+**今天动手做什么**
 
-**任务**
+- 实现 `route_after_validation`：accept / retry_extract / retrieve_more / human_review。
 
-完成：
+**当天产出**
 
-```text
-02-single-agent-extractor/
-├── README.md
-├── pyproject.toml
-├── src/
-├── tests/
-├── evals/
-└── examples/
-```
+- `04-langgraph-extractor/routing.py`
 
-README 必须有：
+**验收测试 / 通过标准**
 
-- Problem
-- Why Agent
-- Architecture
-- Tool Contracts
-- Failure Modes
-- Evaluation
-- Limitations
+- [ ] 至少 8 个参数化路由测试。
+- [ ] 相同 state 输入路由结果确定。
 
----
+### Day 33 — Loop 与终止：图也会死循环
 
-### Day 28 — Level 1 验收
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-## Level 1 硬性验收标准
+**学习网站**
 
-- [ ] 会用 LangChain v1 `create_agent`，而不是只会复制旧教程。
-- [ ] 至少 4 个 typed tools。
-- [ ] Pydantic 结构化输出。
-- [ ] 40 条测试集。
-- [ ] Schema validity ≥ 95%。
-- [ ] 至少 5 类 failure taxonomy。
-- [ ] Retry 策略按错误类型区分。
-- [ ] 能输出 streaming progress。
-- [ ] 代码按 package 组织，不是单 Notebook。
-- [ ] 能解释 Context 与 Memory 的区别。
+- [LangGraph Workflows + Agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
 
-**面试式验收题**
+**今天学什么**
 
-> “一个 Agent 有 30 个工具，为什么性能可能下降？你会如何重构？”
+- 理解图循环、retry counter、repeated state detection。
 
-至少给出：工具分组、动态工具暴露、Router/Subagent、描述质量、Eval 五个角度中的三个。
+**今天动手做什么**
 
----
+- 增加 retry budget、same-error fingerprint。
+- 故障注入：evidence 永远缺失。
 
-# Level 2 — LangGraph：状态、控制流、持久化与 HITL
+**当天产出**
 
-## 周期
+- `04-langgraph-extractor/guards.py`
 
-Week 5–6
-
-## 本 Level 的目标
-
-把 Agent 从“循环调用模型”升级成“可控的状态系统”。
-
-必须掌握：
-
-- State
-- Node
-- Edge
-- Conditional Edge
-- Reducer
-- Command
-- Subgraph 初步
-- Checkpointer
-- Store
-- Interrupt
-- HITL
-- Durable execution 思维
-
-## 主要官方资源
-
-- LangGraph Overview：<https://docs.langchain.com/oss/python/langgraph/overview>
-- Graph API：<https://docs.langchain.com/oss/python/langgraph/graph-api>
-- Quickstart：<https://docs.langchain.com/oss/python/langgraph/quickstart>
-- Workflows and Agents：<https://docs.langchain.com/oss/python/langgraph/workflows-agents>
-- Persistence：<https://docs.langchain.com/oss/python/langgraph/persistence>
-- Interrupts：<https://docs.langchain.com/oss/python/langgraph/interrupts>
-- HITL：<https://docs.langchain.com/oss/python/langchain/human-in-the-loop>
-- LangGraph 101：<https://github.com/langchain-ai/langgraph-101>
+**验收测试 / 通过标准**
 
----
+- [ ] 最多 N 次后停止。
+- [ ] 停止时返回 failure taxonomy，不只 `failed`。
 
-## Week 5：Graph 思维
+### Day 34 — LangGraph 101：运行官方课程，不只看文档
 
-### Day 29 — 为什么需要 LangGraph？
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习链接**
+**学习网站**
 
-- <https://docs.langchain.com/oss/python/langgraph/overview>
-- <https://docs.langchain.com/oss/python/langgraph/workflows-agents>
+- [LangGraph 101](https://github.com/langchain-ai/langgraph-101)
 
-**任务**
+**今天学什么**
 
-把单 Agent V1 中的隐式流程画成显式 Graph。
+- 运行 101 Fundamentals 中与你当前能力对应的 notebook。
+- 重点比较 StateGraph、tools、memory、streaming。
 
----
+**今天动手做什么**
 
-### Day 30 — State 设计
+- 至少改一个 notebook：替换成材料文献工具。
+- 记录 5 个“与我原理解不同”的点。
 
-**学习链接**
+**当天产出**
 
-- <https://docs.langchain.com/oss/python/langgraph/graph-api>
+- `00-notes/day34-langgraph101.md` + 修改后的 notebook
 
-**任务**
+**验收测试 / 通过标准**
 
-设计：
+- [ ] Notebook 从头可运行。
+- [ ] 至少一次主动修改而非原样执行。
 
-```python
-class ExtractionState(TypedDict):
-    paper_id: str
-    requested_fields: list[str]
-    candidate_evidence: dict
-    extracted_fields: dict
-    validation_errors: list[str]
-    retry_count: int
-    status: str
-```
+### Day 35 — Week 5 Gate：闭卷搭出可路由 Extraction Graph
 
-**重点**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-State 不应变成“什么都往里扔的大字典”。
+**学习网站**
 
----
+- [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
+
+**今天学什么**
 
-### Day 31 — Node 与纯函数边界
+- 不新增知识。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://docs.langchain.com/oss/python/langgraph/quickstart>
+- 从空文件创建 START→retrieve→extract→validate→conditional route→END。
+- 用 MockLLM 跑 6 个 case。
 
-**当天编码**
+**当天产出**
 
-实现节点：
+- `reviews/week05-graph-from-scratch.py`
 
-```text
-classify_request
-retrieve_evidence
-extract_fields
-validate_schema
-normalize_units
-```
+**验收测试 / 通过标准**
 
-每个 Node 单独测试。
+- [ ] 6 case 覆盖 accept/retry/human。
+- [ ] 能画出状态转移。
+- [ ] 不能靠 prompt 文本模拟路由。
 
 ---
 
-### Day 32 — Conditional Edge
+## Week 6 — Persistence、Memory、HITL 与恢复
 
-**学习链接**
+### Day 36 — Persistence / Checkpointer：状态恢复是运行时能力
 
-- <https://docs.langchain.com/oss/python/langgraph/graph-api>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**当天编码**
+**学习网站**
 
-```text
-validate
-  ├── pass → normalize
-  ├── missing_evidence → retrieve
-  ├── invalid_schema → reextract
-  └── conflict → human_review
-```
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
 
----
+**今天学什么**
 
-### Day 33 — Loop、停止与循环检测
+- 精读 checkpoints、threads、state snapshots。
+- 理解 persistence 与数据库业务存储不同。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://docs.langchain.com/oss/python/langgraph/workflows-agents>
+- 给 graph 接入 checkpointer。
+- 同一 thread 连续运行并读取 state history。
 
-**任务**
+**当天产出**
 
-实现：
+- `04-langgraph-extractor/persistence_demo.py`
 
-- retry counter
-- route history
-- repeated state fingerprint
-- fail terminal state
+**验收测试 / 通过标准**
 
----
+- [ ] 不同 thread 隔离。
+- [ ] 可展示至少 3 个 checkpoint。
 
-### Day 34 — LangGraph 101 深入运行
+### Day 37 — Memory：短期状态、长期记忆、检索库三分法
 
-**学习链接**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/101/101_langchain_langgraph.ipynb>
+**学习网站**
 
-**任务**
+- [Hello-Agents Ch8](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter8/%E7%AC%AC%E5%85%AB%E7%AB%A0%20%E8%AE%B0%E5%BF%86%E4%B8%8E%E6%A3%80%E7%B4%A2.md)
+- [LangGraph Memory](https://docs.langchain.com/oss/python/langgraph/memory)
+- [LangChain Long-term Memory](https://docs.langchain.com/oss/python/langchain/long-term-memory)
 
-不要只运行。把其中一个示例改成你的材料抽取场景。
+**今天学什么**
 
----
+- 选择性阅读 Ch8：Memory/RAG/存储；重点建立分类。
+- 区分 checkpoint state、store memory、vector retrieval。
 
-### Day 35 — Week 5 闭卷重构
+**今天动手做什么**
 
-**任务**
+- 写 `memory_decision_table.md`。
+- 为文献抽取系统定义：论文级 state、用户偏好 memory、文献知识库。
 
-从空文件写一个最小 Graph：
+**当天产出**
 
-```text
-START
- ↓
-retrieve
- ↓
-extract
- ↓
-validate
- ↙    ↘
-retry  END
-```
+- `04-langgraph-extractor/memory_decision_table.md`
 
-能在纸上解释 State 每次如何变化。
+**验收测试 / 通过标准**
 
----
+- [ ] 对 10 个信息项正确归类。
+- [ ] 能解释“把所有历史全文放 messages”为什么错误。
 
-## Week 6：Persistence、HITL、完整状态系统
+### Day 38 — Interrupt：把“不确定”升级成可暂停状态
 
-### Day 36 — Persistence 与 Checkpointer
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习链接**
+**学习网站**
 
-- <https://docs.langchain.com/oss/python/langgraph/persistence>
+- [LangGraph Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
 
-**任务**
+**今天学什么**
 
-让任务中断后能按 `thread_id` 恢复。
+- 理解 pause/resume、JSON-serializable payload、thread identity。
 
-测试：
+**今天动手做什么**
 
-1. 运行到 validate。
-2. 人工终止进程。
-3. 重启。
-4. 从 checkpoint 继续。
+- 当 validation severity=high 时 `interrupt()`。
+- payload 包含字段、候选值、证据、原因。
 
----
+**当天产出**
 
-### Day 37 — Memory：Checkpointer vs Store
+- `04-langgraph-extractor/hitl.py`
 
-**学习链接**
+**验收测试 / 通过标准**
 
-- <https://docs.langchain.com/oss/python/langgraph/add-memory>
-- <https://docs.langchain.com/oss/python/langgraph/persistence>
+- [ ] 运行到人工点确实暂停。
+- [ ] 重启进程后在支持的持久化环境中可恢复，或至少用测试验证 resume。
 
-**任务**
+### Day 39 — HITL Policy：不是所有低置信度都找人
 
-写清：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- thread-scoped short-term state
-- cross-thread long-term memory
+**学习网站**
 
-不要把“聊天记录”当成全部 Memory。
+- [LangGraph Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
 
----
+**今天学什么**
 
-### Day 38 — Interrupt
+- 设计风险分级：auto-accept / auto-retry / human-review / reject。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://docs.langchain.com/oss/python/langgraph/interrupts>
+- 为文献抽取系统写 12 条 policy。
+- 示例：单位冲突、证据缺失、数据库写入、重复样品 ID。
 
-**任务**
+**当天产出**
 
-在发现冲突证据时暂停：
+- `04-langgraph-extractor/hitl_policy.md`
 
-```text
-Paper says 52.1 MPa in text
-Table says 49.8 MPa
-```
+**验收测试 / 通过标准**
 
-返回给人工审核。
+- [ ] 每条 policy 有触发条件和行动。
+- [ ] 能说明成本与风险权衡。
 
----
+### Day 40 — Subgraph：为未来多 Agent 做边界准备
 
-### Day 39 — Human-in-the-loop
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习链接**
+**学习网站**
 
-- <https://docs.langchain.com/oss/python/langchain/human-in-the-loop>
-- <https://github.com/langchain-ai/agents-from-scratch/blob/main/notebooks/hitl.ipynb>
+- [LangGraph Subgraphs](https://docs.langchain.com/oss/python/langgraph/use-subgraphs)
 
-**任务**
+**今天学什么**
 
-支持：
+- 学习 subgraph 适用场景：复用、团队分工、状态隔离。
 
-```text
-approve
-edit
-reject
-respond
-```
+**今天动手做什么**
 
-并保证恢复后状态一致。
+- 把 validation pipeline 封装为 subgraph。
 
----
+**当天产出**
 
-### Day 40 — Agents From Scratch：Memory
+- `04-langgraph-extractor/subgraphs/validation_graph.py`
 
-**学习链接**
+**验收测试 / 通过标准**
 
-- <https://github.com/langchain-ai/agents-from-scratch/blob/main/notebooks/memory.ipynb>
+- [ ] 主图只依赖清晰输入输出。
+- [ ] subgraph 单独可测。
 
-**任务**
+### Day 41 — Paper Extraction Graph v2：持久化 + HITL 完整集成
 
-设计“抽取偏好记忆”：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- 用户默认要 MPa。
-- 用户要求保留原始证据。
-- 某字段默认从 Experimental section 优先搜索。
+**学习网站**
 
-**禁止**
+- [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
+- [Hello-Agents Ch8](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter8/%E7%AC%AC%E5%85%AB%E7%AB%A0%20%E8%AE%B0%E5%BF%86%E4%B8%8E%E6%A3%80%E7%B4%A2.md)
 
-把整篇历史全部永久保存进 Prompt。
+**今天学什么**
 
----
+- 整合本周能力。
 
-### Day 41 — 完成 `paper-extraction-graph-v2`
-
-**任务**
-
-至少包含：
-
-```text
-START
-  ↓
-request_router
-  ↓
-evidence_retriever
-  ↓
-extractor
-  ↓
-validator
-  ├── valid → normalizer → END
-  ├── insufficient → retriever
-  ├── malformed → extractor
-  └── conflict → HITL → resume
-```
+**今天动手做什么**
 
----
+- 完成 graph v2。
+- 加入 CLI：start/resume/status。
+- 将 20-case eval 扩到 30 case。
+
+**当天产出**
+
+- `04-langgraph-extractor/` 完整项目
+
+**验收测试 / 通过标准**
+
+- [ ] 模拟中断后可恢复。
+- [ ] 30 case 无无限循环。
+- [ ] 每个 run 有 thread_id 和终止原因。
+
+### Day 42 — Level 2 验收：Stateful Agent 工程能力
+
+**时间预算：** 口述 35 min｜恢复演示 55 min｜测试 55 min｜总结 20 min（≈2 h 45 min）
 
-### Day 42 — Level 2 验收
+**学习网站**
 
-## Level 2 硬性验收标准
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [LangGraph Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
 
-- [ ] 自己定义 State，而不是复制示例。
-- [ ] 至少 6 个 Nodes。
-- [ ] 至少 3 条 Conditional routes。
-- [ ] 至少 1 个合法循环。
-- [ ] 有循环终止策略。
-- [ ] Checkpoint 后可恢复。
-- [ ] 实现 HITL pause/resume。
-- [ ] Node 级别单元测试。
-- [ ] Graph 级集成测试。
-- [ ] 能解释 State / Context / Memory / Store / Checkpoint。
+**今天学什么**
 
-**面试式验收题**
+- 只验收。
 
-> “为什么 LangGraph 不只是把流程画成图？它解决了哪些普通 Agent Loop 的工程问题？”
+**今天动手做什么**
 
-要求覆盖：控制流、状态、持久化、恢复、HITL、可测试性中的至少四项。
+- 闭卷解释 State/Context/Memory/Persistence。
+- 现场演示：启动→失败→checkpoint→人工输入→resume。
+- 对 graph 做 10 个单元/路由测试。
 
+**当天产出**
+
+- `level-gates/level2.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 能恢复，不从头重跑。
+- [ ] HITL payload 可审计。
+- [ ] 路由测试通过率 100%。
+- [ ] 能解释 checkpointer 与业务数据库差异。
+
 ---
 
-# Level 3 — Multi-Agent：架构选择，而不是 Agent 数量竞赛
+# Level 3 — Multi-Agent 协调 + DeepResearch 思维
 
-## 周期
+**周期：** Week 7–8  
+**Level 主要产出：** `paper-multi-agent-v3 + baseline study`  
+**晋级本质：** 能证明何时多 Agent 有价值，何时没有
 
-Week 7–8
+## Week 7 — Multi-Agent 模式与协调边界
 
-## 本 Level 的目标
+### Day 43 — Multi-Agent 的第一原则：协调成本必须有收益
 
-掌握并比较：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- Router
-- Supervisor / Subagents
-- Handoff
-- Agent-as-Tool
-- Parallel Workers
-- Generator–Critic
-- Planner–Executor
-- Custom Workflow
-- Subgraphs
+**学习网站**
 
-核心问题：
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
 
-> **什么时候拆 Agent，什么时候坚决不拆？**
+**今天学什么**
 
-## 主要官方资源
+- 学习 subagents、handoffs、router、custom workflow 等模式。
+- 明确多 Agent 价值：context isolation、parallelism、specialization、permissions。
 
-- LangChain Multi-Agent：<https://docs.langchain.com/oss/python/langchain/multi-agent>
-- Subagents：<https://docs.langchain.com/oss/python/langchain/multi-agent/subagents>
-- Router：<https://docs.langchain.com/oss/python/langchain/multi-agent/router>
-- Personal Assistant with Subagents：<https://docs.langchain.com/oss/python/langchain/multi-agent/subagents-personal-assistant>
-- LangGraph Subgraphs：<https://docs.langchain.com/oss/python/langgraph/use-subgraphs>
-- LangGraph 101 Multi-Agent Notebook：<https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/multi_agent.ipynb>
-- Research Agent Notebook：<https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/research_agent.ipynb>
-- OpenAI Agents SDK Quickstart：<https://openai.github.io/openai-agents-python/quickstart/>
-- OpenAI Handoffs：<https://openai.github.io/openai-agents-python/handoffs/>
+**今天动手做什么**
 
----
+- 列出文献抽取系统拆成 5 Agent 的收益假设和反例。
+- 定义 single-agent baseline。
 
-## Week 7：Multi-Agent 模式与判断
+**当天产出**
 
-### Day 43 — 为什么 Multi-Agent？为什么经常不需要？
+- `05-multi-agent/adr/002-why-multi-agent.md`
 
-**学习链接**
+**验收测试 / 通过标准**
 
-- <https://docs.langchain.com/oss/python/langchain/multi-agent>
+- [ ] 至少提出 3 个可测收益。
+- [ ] 若收益无法测量，默认不拆。
 
-**任务**
+### Day 44 — Router：显式分类与并行分发
 
-为以下原因分别举例：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- context isolation
-- tool isolation
-- domain specialization
-- parallelism
-- permission boundary
-- independent evaluation
+**学习网站**
 
-再写 3 个“不该拆”的例子。
+- [LangChain Router](https://docs.langchain.com/oss/python/langchain/multi-agent/router)
+- [Router Knowledge Base Tutorial](https://docs.langchain.com/oss/python/langchain/multi-agent/router-knowledge-base)
 
----
+**今天学什么**
 
-### Day 44 — Router
+- 理解 router 适用于显式预处理、并行控制。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://docs.langchain.com/oss/python/langchain/multi-agent/router>
+- 实现 document request router：composition/property/experiment/mixed。
+- mixed 允许并行。
 
-**当天编码**
+**当天产出**
 
-字段路由：
+- `05-multi-agent/router.py`
 
-```text
-composition
-mechanical_property
-hydration_heat
-shrinkage
-durability
-experimental_condition
-```
+**验收测试 / 通过标准**
 
-先只做 Router + 单独函数，不急着每类一个 Agent。
+- [ ] 20 条路由集 accuracy≥90%。
+- [ ] 路由输出 schema 固定。
 
----
+### Day 45 — Subagents / Supervisor：中央协调何时合理
 
-### Day 45 — Supervisor / Subagents
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习链接**
+**学习网站**
 
-- <https://docs.langchain.com/oss/python/langchain/multi-agent/subagents>
-- <https://docs.langchain.com/oss/python/langchain/multi-agent/subagents-personal-assistant>
+- [LangChain Subagents](https://docs.langchain.com/oss/python/langchain/multi-agent/subagents)
 
-**任务**
+**今天学什么**
 
-实现：
+- 学习主 Agent 将 subagent 作为工具调用的模式。
+- 理解 centralized context 的优缺点。
 
-```text
-Supervisor
-├── Composition Agent
-├── Property Agent
-└── Experimental Agent
-```
+**今天动手做什么**
 
-**关键要求**
+- 实现 Composition、Property 两个 subagent。
+- Supervisor 只接收压缩结果，不转发全文。
 
-Supervisor 不能只是把同一大段全文重复发给每个 Agent。
+**当天产出**
 
----
+- `05-multi-agent/subagents_v0.py`
 
-### Day 46 — Multi-Agent Notebook
+**验收测试 / 通过标准**
 
-**学习链接**
+- [ ] 两个 Agent 职责无重叠或能明确解释重叠。
+- [ ] subagent 输出带 evidence。
 
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/multi_agent.ipynb>
+### Day 46 — Handoff：控制权转移与 Agent-as-Tool 的区别
 
-**任务**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-运行并分析：
+**学习网站**
 
-- 谁持有上下文？
-- 谁决定调用？
-- 子 Agent 是 stateful 还是 stateless？
-- 结果怎么回传？
+- [LangChain Handoffs](https://docs.langchain.com/oss/python/langchain/multi-agent/handoffs)
+- [OpenAI Agents SDK Handoffs](https://openai.github.io/openai-agents-python/handoffs/)
 
----
+**今天学什么**
 
-### Day 47 — Handoff 与 Agent-as-Tool
+- 比较 delegation as tool 与 handoff takeover。
+- 理解 handoff 会改变谁拥有后续上下文/控制权。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://openai.github.io/openai-agents-python/handoffs/>
-- <https://openai.github.io/openai-agents-python/quickstart/>
+- 用一个最小客服示例或文献例子分别实现两种模式。
+- 写对照表。
 
-**任务**
+**当天产出**
 
-写一页比较：
+- `05-multi-agent/handoff_vs_tool.md` + demo
 
-```text
-Handoff
-vs
-Agent as Tool
-```
+**验收测试 / 通过标准**
 
-并各做一个 2-agent 示例。
+- [ ] 能指出文献抽取主链中哪些位置不适合 handoff。
+- [ ] 两种实现 trace 可区分。
 
----
+### Day 47 — Extractor–Verifier：你的核心多 Agent 模式
 
-### Day 48 — Generator–Critic / Extractor–Verifier
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**任务**
+**学习网站**
 
-实现：
+- [Hello-Agents Ch4](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter4/%E7%AC%AC%E5%9B%9B%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E7%BB%8F%E5%85%B8%E8%8C%83%E5%BC%8F%E6%9E%84%E5%BB%BA.md)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
 
-```text
-Extractor Agent
-   ↓
-Verifier Agent
-   ├── pass → accept
-   └── fail → targeted feedback → extractor
-```
+**今天学什么**
 
-**限制**
+- 把 Reflection 思想升级为职责隔离。
+- Verifier 不应直接重写原结果。
 
-最多 2 次反馈循环。
+**今天动手做什么**
 
-**关键评估**
+- 实现 extractor → verifier → targeted repair。
+- Verifier 输出 issue list 与 severity。
 
-必须比较：单 Agent vs Extractor+Verifier。
+**当天产出**
 
----
+- `05-multi-agent/extractor_verifier.py`
 
-### Day 49 — Week 7 架构评审
+**验收测试 / 通过标准**
 
-**任务**
+- [ ] Verifier 至少发现 3 类注入错误。
+- [ ] repair 只修改被标记字段。
 
-为你的系统写 ADR：
+### Day 48 — 共享状态污染：多 Agent 最常见隐性故障
 
-`ADR-001-why-multi-agent.md`
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-必须回答：
+**学习网站**
 
-- 单 Agent baseline 哪里失败？
-- 拆分依据是什么？
-- 新增 Agent 的成本是什么？
-- 如何证明收益？
+- [LangChain Context Engineering](https://docs.langchain.com/oss/python/langchain/context-engineering)
+- [LangGraph Subgraphs](https://docs.langchain.com/oss/python/langgraph/use-subgraphs)
 
----
+**今天学什么**
 
-## Week 8：并行研究与完整多 Agent 文献抽取
+- 理解 context leakage、shared scratchpad、authority confusion。
 
-### Day 50 — Subgraphs
+**今天动手做什么**
 
-**学习链接**
+- 给每个 Agent 定义最小输入 schema。
+- 禁止 Composition Agent 看到无关长上下文。
+- 记录 context bytes/tokens 近似量。
 
-- <https://docs.langchain.com/oss/python/langgraph/use-subgraphs>
+**当天产出**
 
-**任务**
+- `05-multi-agent/context_contracts.md`
 
-把至少一个专业 Agent 实现为 Subgraph。
+**验收测试 / 通过标准**
 
----
+- [ ] 每个 Agent 的输入字段可列举。
+- [ ] 至少减少一次无关上下文注入。
+
+### Day 49 — Week 7 架构评审：用 ADR 而不是“感觉更高级”
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
 
-### Day 51 — Parallel Workers
+- [Hello-Agents Ch13](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter13/%E7%AC%AC%E5%8D%81%E4%B8%89%E7%AB%A0%20%E6%99%BA%E8%83%BD%E6%97%85%E8%A1%8C%E5%8A%A9%E6%89%8B.md)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
 
-**学习链接**
+**今天学什么**
 
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/research_agent.ipynb>
+- 选择性阅读 Ch13 的多 Agent 协作设计，不复制旅游业务。
 
-**任务**
+**今天动手做什么**
 
-并行抽取：
+- 做 30 分钟架构评审：Router vs Supervisor vs Custom Workflow。
+- 产出最终 V3 拓扑。
 
-```text
-Worker A → composition
-Worker B → strength
-Worker C → heat
-Worker D → curing
-```
+**当天产出**
 
-记录串行与并行延迟。
+- `05-multi-agent/architecture_v3.md`
 
+**验收测试 / 通过标准**
+
+- [ ] 每条 Agent 边有 input/output/owner/stop condition。
+- [ ] 能说明至少 2 个地方坚持用 deterministic workflow。
+
 ---
 
-### Day 52 — Research Agent 思维
+## Week 8 — DeepResearch 思维与多 Agent 文献抽取
 
-**学习链接**
+### Day 50 — DeepResearch Agent：学习长任务分解，不照抄产品
 
-- <https://github.com/langchain-ai/deep_research_from_scratch>
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/research_agent.ipynb>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**任务**
+**学习网站**
 
-理解：
+- [Hello-Agents Ch14](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter14/%E7%AC%AC%E5%8D%81%E5%9B%9B%E7%AB%A0%20%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B7%B1%E5%BA%A6%E7%A0%94%E7%A9%B6%E6%99%BA%E8%83%BD%E4%BD%93.md)
 
-```text
-Scope → Research → Synthesize
-```
+**今天学什么**
 
-将其映射为：
+- 精读：任务拆解、检索、迭代研究、综合。
+- 关注长任务中的 query refinement、evidence accumulation。
 
-```text
-Field Planning → Evidence Search → Extraction Synthesis
-```
+**今天动手做什么**
 
----
+- 把 DeepResearch 模式映射到“跨段落/跨表格文献抽取”。
 
-### Day 53 — Multi-Agent 共享状态与污染问题
+**当天产出**
 
-**学习链接**
+- `00-notes/day50-deepresearch-mapping.md`
 
-- <https://docs.langchain.com/oss/python/langchain/multi-agent>
+**验收测试 / 通过标准**
 
-**任务**
+- [ ] 至少识别 4 个可迁移设计。
+- [ ] 至少指出 3 个不适用于单篇抽取的设计。
 
-设计：
+### Day 51 — Parallel Workers：能并行不代表应该并行
 
-- 什么信息共享？
-- 什么信息隔离？
-- 如何避免一个 Agent 的错误污染所有 Agent？
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-实现 typed handoff payload。
+**学习网站**
 
----
+- [Router Knowledge Base Tutorial](https://docs.langchain.com/oss/python/langchain/multi-agent/router-knowledge-base)
+- [LangChain Custom Workflow](https://docs.langchain.com/oss/python/langchain/multi-agent/custom-workflow)
 
-### Day 54 — 完成多 Agent V3
-
-**目标架构**
-
-```text
-                    Request Router
-                         │
-              ┌──────────┼──────────┐
-              ↓          ↓          ↓
-       Composition   Property   Experiment
-          Agent        Agent       Agent
-              └──────────┼──────────┘
-                         ↓
-                    Synthesizer
-                         ↓
-                   Verifier Agent
-                    /          \
-                 pass          fail
-                  ↓             ↓
-             Code Validator   Targeted Retry
-                  ↓
-               Database
-```
+**今天学什么**
 
----
+- 理解 Send/并行任务思想、汇总与冲突。
 
-### Day 55 — 单 Agent vs Multi-Agent 对照实验
+**今天动手做什么**
 
-**必须做，不可跳过。**
+- 并行运行 composition/property/experiment workers。
+- 记录 wall time 与总模型调用数。
 
-至少 50 条相同测试：
+**当天产出**
 
-| 指标 | Single | Multi |
-|---|---:|---:|
-| Field Accuracy | | |
-| Evidence Precision | | |
-| Schema Validity | | |
-| Avg Tool Calls | | |
-| Avg Latency | | |
-| Estimated Cost | | |
-| Failure Rate | | |
+- `05-multi-agent/parallel_workers.py`
 
-**晋级原则**
+**验收测试 / 通过标准**
 
-如果 Multi-Agent 没显著收益，你必须敢于删 Agent。
+- [ ] 结果顺序不影响 merge。
+- [ ] 单 worker 失败不吞掉其他结果。
 
----
+### Day 52 — Evidence Merger：多 Agent 最终必须解决冲突
 
-### Day 56 — Level 3 验收
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-## Level 3 硬性验收标准
+**学习网站**
 
-- [ ] 能解释 Router、Supervisor、Handoff、Agent-as-Tool。
-- [ ] 至少实现两种 Multi-Agent pattern。
-- [ ] 有 typed handoff payload。
-- [ ] 有专业 Agent 的上下文隔离。
-- [ ] 至少一个 Subgraph。
-- [ ] 至少一个并行 Worker 场景。
-- [ ] Extractor–Verifier 有最大循环次数。
-- [ ] 用同一测试集比较 Single vs Multi。
-- [ ] 能基于数据决定是否保留 Multi-Agent。
-- [ ] 有 ADR 文档。
+- [Hello-Agents Ch14](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter14/%E7%AC%AC%E5%8D%81%E5%9B%9B%E7%AB%A0%20%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B7%B1%E5%BA%A6%E7%A0%94%E7%A9%B6%E6%99%BA%E8%83%BD%E4%BD%93.md)
 
-**面试式验收题**
+**今天学什么**
 
-> “为什么多 Agent 可能比单 Agent 更差？”
+- 理解 synthesis 不是简单 concat。
+- 设计 provenance-aware merge。
 
-必须覆盖：成本、延迟、错误传播、路由误差、上下文丢失、协调复杂度、非确定性放大中的至少五项。
+**今天动手做什么**
 
----
+- 同一字段多个候选值时按 evidence、sample_id、condition 合并。
 
-# Level 4 — Evaluation、Tracing、Context Engineering 与 MCP
+**当天产出**
 
-## 周期
+- `05-multi-agent/merger.py`
 
-Week 9–10
+**验收测试 / 通过标准**
 
-## 本 Level 的目标
+- [ ] 冲突值不得静默覆盖。
+- [ ] 输出保留来源 Agent 和 evidence id。
 
-这一阶段决定你是“Demo 开发者”还是“Agent Engineer”。
+### Day 53 — 多 Agent Stop Condition 与反复争论检测
 
-必须掌握：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- Offline Eval
-- Online Eval 概念
-- Dataset
-- Deterministic evaluator
-- LLM-as-judge
-- Final response eval
-- Trajectory eval
-- Single-step eval
-- Tracing
-- Failure taxonomy
-- Context budget
-- MCP Client / Server / Tool / Resource / Prompt
+**学习网站**
 
-## 主要官方资源
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
 
-- LangSmith Evaluation：<https://docs.langchain.com/langsmith/evaluation>
-- Evaluation Concepts：<https://docs.langchain.com/langsmith/evaluation-concepts>
-- Evaluation Quickstart：<https://docs.langchain.com/langsmith/evaluation-quickstart>
-- Evaluate Complex Agent：<https://docs.langchain.com/langsmith/evaluate-complex-agent>
-- Observability：<https://docs.langchain.com/langsmith/observability>
-- Agents From Scratch Evaluation：<https://github.com/langchain-ai/agents-from-scratch/blob/main/notebooks/evaluation.ipynb>
-- OpenAI Tracing：<https://openai.github.io/openai-agents-python/tracing/>
-- MCP Introduction：<https://modelcontextprotocol.io/docs/getting-started/intro>
-- MCP Architecture：<https://modelcontextprotocol.io/docs/learn/architecture>
-- HF MCP Course：<https://huggingface.co/learn/mcp-course/unit0/introduction>
-- HF Context Course：<https://huggingface.co/learn/context-course/unit0/introduction>
+**今天学什么**
 
----
+- 理解 ping-pong、critic loops、task drift。
 
-## Week 9：Agent Evaluation 与 Observability
+**今天动手做什么**
 
-### Day 57 — 什么叫“Agent 正确”？
+- 增加 per-agent step budget、global budget、same-issue fingerprint。
 
-**学习链接**
+**当天产出**
 
-- <https://docs.langchain.com/langsmith/evaluation-concepts>
-- <https://docs.langchain.com/langsmith/evaluate-complex-agent>
+- `05-multi-agent/coordination_guards.py`
 
-**任务**
+**验收测试 / 通过标准**
 
-建立评价层：
+- [ ] 构造 Extractor↔Verifier 循环，系统在阈值内停止。
+- [ ] partial results 可返回。
 
-```text
-Final Answer
-Trajectory
-Single Step
-System Metrics
-```
+### Day 54 — 完成 paper-multi-agent-v3
 
----
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-### Day 58 — 构建正式 Eval Dataset
+**学习网站**
 
-**学习链接**
+- [Hello-Agents Ch16](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter16/%E7%AC%AC%E5%8D%81%E5%85%AD%E7%AB%A0%20%E6%AF%95%E4%B8%9A%E8%AE%BE%E8%AE%A1.md)
+- [LangChain Subagents](https://docs.langchain.com/oss/python/langchain/multi-agent/subagents)
 
-- <https://docs.langchain.com/langsmith/evaluation-quickstart>
+**今天学什么**
 
-**任务**
+- 选择性阅读 Ch16 的毕业设计要求，用作完整项目检查表。
 
-把数据集扩到至少 80 条；推荐最终 100 条。
+**今天动手做什么**
 
-覆盖：
+- 集成 Router/Supervisor、3 专业 Agent、Verifier、Code Validator。
+- 扩展 eval 到 50 case。
 
-- happy path
-- missing data
-- conflicting evidence
-- misleading context
-- unit mismatch
-- tool failure
-- multi-hop evidence
-- abstention
+**当天产出**
 
----
+- `05-multi-agent/` 可运行 V3
 
-### Day 59 — Deterministic Evaluators
+**验收测试 / 通过标准**
 
-**任务**
+- [ ] 50 case 可批量运行。
+- [ ] 每个 run 记录 Agent 路径。
+- [ ] 所有字段含 provenance。
 
-实现：
+### Day 55 — Single vs Multi：第一次做真正架构实验
 
-```text
-schema_validity
-numeric_exact_match
-numeric_tolerance
-unit_correctness
-evidence_nonempty
-citation_contains_value
-forbidden_field_hallucination
-```
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-这些优先于 LLM-as-judge。
+**学习网站**
 
----
+- [LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
 
-### Day 60 — LLM-as-Judge
+**今天学什么**
 
-**学习链接**
+- 定义比较指标：field accuracy、evidence precision、latency、calls、cost proxy、failure rate。
 
-- <https://docs.langchain.com/langsmith/evaluation>
-- <https://github.com/langchain-ai/agents-from-scratch/blob/main/notebooks/evaluation.ipynb>
+**今天动手做什么**
 
-**任务**
+- 同一 50-case 跑 v1 single 与 v3 multi。
+- 固定模型/温度/数据。
 
-只用于难以确定性判断的维度：
+**当天产出**
 
-- evidence sufficiency
-- semantic consistency
-- explanation quality
+- `reports/single_vs_multi_v1.md` + CSV
 
-**要求**
+**验收测试 / 通过标准**
 
-写清 Judge rubric。
+- [ ] 报告必须允许得出“Multi-Agent 不更好”。
+- [ ] 至少 5 个 case 做配对分析。
 
----
+### Day 56 — Level 3 验收：Multi-Agent 是架构能力，不是角色扮演
+
+**时间预算：** 口述 40 min｜三类演示 70 min｜实验答辩 45 min｜总结 15 min（≈2 h 50 min）
+
+**学习网站**
+
+- [Hello-Agents Ch13](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter13/%E7%AC%AC%E5%8D%81%E4%B8%89%E7%AB%A0%20%E6%99%BA%E8%83%BD%E6%97%85%E8%A1%8C%E5%8A%A9%E6%89%8B.md)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
+
+**今天学什么**
 
-### Day 61 — Trajectory Evaluation
+- 只验收。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://docs.langchain.com/langsmith/evaluate-complex-agent>
+- 现场解释 Router/Subagents/Handoff/Custom Workflow。
+- 演示一个并行 case、一个冲突 case、一个循环 case。
+- 答辩 Single vs Multi 实验。
 
-**任务**
+**当天产出**
 
-评估：
+- `level-gates/level3.md`
 
-- 是否调用正确 Tool
-- Tool 顺序是否合理
-- 是否有重复调用
-- 是否绕过 Validator
-- 是否过早结束
+**验收测试 / 通过标准**
 
+- [ ] 能说明每个 Agent 的必要性。
+- [ ] 冲突不丢 provenance。
+- [ ] 循环可停止。
+- [ ] 有量化 baseline 对照。
+
 ---
 
-### Day 62 — Tracing 与故障定位
+# Level 4 — Evaluation + Tracing + Context Engineering + MCP
 
-**学习链接**
+**周期：** Week 9–10  
+**Level 主要产出：** `eval suite + context ablation + MCP server`  
+**晋级本质：** 能用数据和 trace 驱动可靠性改进
 
-- <https://docs.langchain.com/langsmith/observability>
-- <https://openai.github.io/openai-agents-python/tracing/>
+## Week 9 — Agent Evaluation、Trajectory 与 Tracing
 
-**任务**
+### Day 57 — Agent Evaluation 全景：最终答案只是一个层面
 
-对 20 个失败样本分类：
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-```text
-routing_error
-retrieval_error
-extraction_error
-validation_error
-tool_error
-handoff_error
-context_overflow
-loop_error
-```
+**学习网站**
 
----
+- [Hello-Agents Ch12](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter12/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E6%80%A7%E8%83%BD%E8%AF%84%E4%BC%B0.md)
+- [LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation)
 
-### Day 63 — Week 9 Eval Gate
+**今天学什么**
 
-**验收任务**
+- 精读 Ch12 中指标/benchmark/evaluation framework。
+- 学习 offline eval、online eval、dataset、evaluator、experiment。
 
-提交一份：
+**今天动手做什么**
 
-`evaluation_report_v1.md`
+- 写 Literature Extraction Eval Spec v1。
+- 分 response / field / evidence / tool / trajectory / system。
 
-至少包含：
+**当天产出**
 
-- Dataset composition
-- Metrics
-- Baseline
-- Current model
-- Error analysis
-- Cost/latency
-- Next experiments
+- `06-evaluation/eval_spec.md`
 
----
+**验收测试 / 通过标准**
 
-## Week 10：Context Engineering + MCP
+- [ ] 每个指标有定义、输入、计算方法、阈值。
+- [ ] 禁止“效果不错”这类不可测标准。
 
-### Day 64 — Context Engineering 正式学习
+### Day 58 — 正式 Eval Dataset：从 50 条扩到 ≥80 条
 
-**学习链接**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- <https://huggingface.co/learn/context-course/unit0/introduction>
-- <https://docs.langchain.com/oss/python/langchain/context-engineering>
+**学习网站**
 
-**任务**
+- [LangSmith Evaluation Concepts](https://docs.langchain.com/langsmith/evaluation-concepts)
 
-为每次模型调用画 Context Packet：
+**今天学什么**
 
-```text
-system instructions
-current task
-selected evidence
-state summary
-tool descriptions
-memory
-previous observations
-```
+- 学习 curated cases、production traces、synthetic cases 的角色。
 
----
+**今天动手做什么**
 
-### Day 65 — Context Budget
+- 扩到至少 80 条，推荐 100。
+- 按 normal/missing/conflict/cross-section/table-like/adversarial 分层。
 
-**任务**
+**当天产出**
 
-实现一个简单 budgeter：
+- `datasets/literature_eval_v1.jsonl` + dataset card
 
-```text
-max_context_tokens
-reserved_output_tokens
-evidence_budget
-history_budget
-tool_budget
-```
+**验收测试 / 通过标准**
 
-比较“整篇全文”与“按需证据”的效果。
+- [ ] ≥80 条。
+- [ ] 每类有最少样本。
+- [ ] 人工检查随机 15 条 gold。
 
----
+### Day 59 — Deterministic Evaluators：能用代码判断就别先用 Judge
 
-### Day 66 — MCP 是什么，不是什么
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**学习链接**
+**学习网站**
 
-- <https://modelcontextprotocol.io/docs/getting-started/intro>
-- <https://modelcontextprotocol.io/docs/learn/architecture>
+- [LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation)
 
-**任务**
+**今天学什么**
 
-解释：
+- 学习 code evaluators。
 
-```text
-Host
-Client
-Server
-Tools
-Resources
-Prompts
-Transport
-```
+**今天动手做什么**
 
-明确：MCP 不是 Agent 框架。
+- 实现 schema validity、exact/normalized match、unit validity、evidence substring、tool whitelist。
 
----
+**当天产出**
 
-### Day 67 — Hugging Face MCP Course
+- `06-evaluation/evaluators/deterministic.py`
 
-**学习链接**
+**验收测试 / 通过标准**
 
-- <https://huggingface.co/learn/mcp-course/unit0/introduction>
-- <https://github.com/huggingface/mcp-course>
+- [ ] 至少 5 个 evaluator。
+- [ ] 每个有独立单测。
 
-**任务**
+### Day 60 — LLM-as-Judge：只评代码难以定义的质量
 
-完成基础部分，建立最小 Server。
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
----
+**学习网站**
 
-### Day 68 — 为文献系统写 MCP Server
+- [LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation)
+- [Hello-Agents Ch12](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter12/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E6%80%A7%E8%83%BD%E8%AF%84%E4%BC%B0.md)
 
-**任务**
+**今天学什么**
 
-暴露至少 3 个工具：
+- 学习 rubric、reference-based vs reference-free、judge bias。
 
-```text
-search_paper_sections
-get_evidence_span
-normalize_material_unit
-```
+**今天动手做什么**
 
-可选 Resource：
+- 设计 evidence sufficiency 与 explanation quality rubric。
+- 抽 20 条做双重评审。
 
-```text
-paper://{paper_id}/metadata
-paper://{paper_id}/sections
-```
+**当天产出**
 
----
+- `06-evaluation/evaluators/judge.py` + `judge_rubric.md`
 
-### Day 69 — MCP 接入 Agent
+**验收测试 / 通过标准**
 
-**学习链接**
+- [ ] Rubric 有 1–5 级锚点。
+- [ ] 同样输入重复评审差异被记录。
 
-- <https://modelcontextprotocol.io/docs/learn/architecture>
+### Day 61 — Trajectory Evaluation：评工具顺序和路径
 
-**任务**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-让 Agent 不再直接 import 某些工具，而通过 MCP 访问。
+**学习网站**
 
-记录：
+- [LangSmith Trajectory Evals](https://docs.langchain.com/langsmith/trajectory-evals)
+- [Evaluate Complex Agent](https://docs.langchain.com/langsmith/evaluate-complex-agent)
 
-- 接入复杂度
-- 解耦收益
-- 错误传播
-- 权限边界
+**今天学什么**
 
----
+- 理解 exact match、subset/subsequence、LLM judge。
 
-### Day 70 — Level 4 验收
+**今天动手做什么**
 
-## Level 4 硬性验收标准
+- 为 20 条关键 case 定 expected trajectory。
+- 评估是否先检索证据再抽取。
 
-- [ ] Eval dataset ≥ 80，推荐 100 条。
-- [ ] 至少 5 个 deterministic evaluators。
-- [ ] 至少 1 个 LLM-as-judge rubric。
-- [ ] 能分别评估 final answer / trajectory / single step。
-- [ ] 有 Trace。
-- [ ] 有失败分类统计。
-- [ ] 比较 cost / latency / quality。
-- [ ] 能解释 Context Engineering。
-- [ ] 能解释 MCP Host/Client/Server。
-- [ ] 自己实现一个至少 3-tool 的 MCP Server。
-- [ ] Agent 能实际调用该 MCP Server。
+**当天产出**
 
-**面试式验收题**
+- `06-evaluation/trajectory_eval.py`
 
-> “一个 Agent 最终答案准确率 90%，为什么仍可能不能上线？”
+**验收测试 / 通过标准**
 
-要求从轨迹、权限、成本、延迟、不可逆副作用、长尾失败、可恢复性、监控至少谈六项。
+- [ ] 能识别“答案对但先猜后补证据”的坏轨迹。
+- [ ] 输出轨迹失败原因。
 
----
+### Day 62 — Tracing：从失败结果回到失败步骤
 
-# Level 5 — Production、部署、作品集与求职门槛
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-## 周期
+**学习网站**
 
-Week 11–12
+- [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
 
-## 本 Level 的目标
+**今天学什么**
 
-把项目从 Notebook 变成可运行系统。
+- 理解 trace/span/event。
+- 选择 LangSmith 或自研结构化 trace；可横向看 OpenAI SDK。
 
-必须掌握：
+**今天动手做什么**
 
-- Package structure
-- Config / Secret 管理
-- FastAPI
-- Async 基础
-- Tests
-- Docker
-- Health check
-- Logging / Tracing
-- API contract
-- README / Architecture Decision Records
-- Demo
-- Resume bullets
-- Interview system design
+- 对 10 个失败 run 做 trace review。
+- 标注 failure stage。
 
-## 主要官方资源
+**当天产出**
 
-- LangGraph Local Server：<https://docs.langchain.com/oss/python/langgraph/local-server>
-- LangGraph Deployment：<https://docs.langchain.com/oss/python/langgraph/deploy>
-- FastAPI：<https://fastapi.tiangolo.com/>
-- FastAPI Async：<https://fastapi.tiangolo.com/async/>
-- FastAPI Testing：<https://fastapi.tiangolo.com/tutorial/testing/>
-- FastAPI Docker：<https://fastapi.tiangolo.com/deployment/docker/>
-- Docker Python Guide：<https://docs.docker.com/guides/python/>
-- OpenAI Customer Service Agents Demo：<https://github.com/openai/openai-cs-agents-demo>
-- LangGraph 101 Email Agent：<https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/email_agent.ipynb>
+- `reports/trace_failure_review.md`
 
----
+**验收测试 / 通过标准**
 
-## Week 11：生产化
-
-### Day 71 — 项目重构
-
-**任务**
-
-目标目录：
-
-```text
-07-production-app/
-├── pyproject.toml
-├── Dockerfile
-├── .env.example
-├── README.md
-├── src/fire_agent/
-│   ├── api/
-│   ├── agents/
-│   ├── graphs/
-│   ├── tools/
-│   ├── mcp/
-│   ├── schemas/
-│   ├── evals/
-│   ├── observability/
-│   └── config/
-├── tests/
-└── docs/
-```
+- [ ] 至少分 prompt/tool/retrieval/model/state/routing 6 类。
+- [ ] 每类给一个修复策略。
 
----
+### Day 63 — Week 9 Eval Gate：建立回归基线
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangSmith Evaluate Graph](https://docs.langchain.com/langsmith/evaluate-graph)
+
+**今天学什么**
 
-### Day 72 — FastAPI API Contract
+- 不新增内容。
 
-**学习链接**
+**今天动手做什么**
 
-- <https://fastapi.tiangolo.com/>
+- 跑 ≥80 case 的 v1/v3。
+- 生成机器可读 metrics.json 和人读 report。
+- 固定随机性设置与版本信息。
 
-**任务**
+**当天产出**
 
-实现：
+- `06-evaluation/baseline/`
 
-```text
-POST /v1/extractions
-GET  /v1/extractions/{task_id}
-POST /v1/extractions/{task_id}/resume
-GET  /health
-```
+**验收测试 / 通过标准**
 
-注意长任务不要假装同步瞬间完成。
+- [ ] 报告包含置信区间或至少样本数。
+- [ ] 任何后续改动都能重跑。
+- [ ] 失败分类覆盖≥90%失败 case。
 
 ---
 
-### Day 73 — Async 与并发
+## Week 10 — Context Engineering 与 MCP
 
-**学习链接**
+### Day 64 — Context Engineering：决定模型这一刻看到什么
 
-- <https://fastapi.tiangolo.com/async/>
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-**任务**
+**学习网站**
 
-检查：
+- [Hello-Agents Ch9](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter9/%E7%AC%AC%E4%B9%9D%E7%AB%A0%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B.md)
+- [LangChain Context Engineering](https://docs.langchain.com/oss/python/langchain/context-engineering)
 
-- 模型调用
-- HTTP Tool
-- DB
-- 并行 worker
+**今天学什么**
 
-哪些是 I/O-bound，哪些不应阻塞事件循环。
+- 精读 Ch9 核心；对照官方 context engineering。
+- 区分 model context、tool context、lifecycle context。
 
----
+**今天动手做什么**
 
-### Day 74 — Testing
+- 为文献抽取系统画 Context Map：每个 Agent 看什么、不看什么。
 
-**学习链接**
+**当天产出**
 
-- <https://fastapi.tiangolo.com/tutorial/testing/>
-- <https://fastapi.tiangolo.com/advanced/async-tests/>
+- `07-context-mcp/context_map.md`
 
-**任务**
+**验收测试 / 通过标准**
 
-至少：
+- [ ] 每类上下文有 owner、生命周期、裁剪策略。
+- [ ] 能指出 3 个当前 context pollution。
 
-- Tool unit tests
-- Node unit tests
-- Graph integration tests
-- API tests
-- Eval regression tests
+### Day 65 — Context Budget：压缩、选择、摘要必须可测
 
----
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-### Day 75 — Docker
+**学习网站**
 
-**学习链接**
+- [Hello-Agents Ch9](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter9/%E7%AC%AC%E4%B9%9D%E7%AB%A0%20%E4%B8%8A%E4%B8%8B%E6%96%87%E5%B7%A5%E7%A8%8B.md)
+- [LangChain Context Engineering](https://docs.langchain.com/oss/python/langchain/context-engineering)
 
-- <https://fastapi.tiangolo.com/deployment/docker/>
-- <https://docs.docker.com/guides/python/>
+**今天学什么**
 
-**任务**
+- 学习 selection、compression、summarization、offloading 思路。
 
-完成：
+**今天动手做什么**
 
-```bash
-docker build -t fire-agent .
-docker run --env-file .env -p 8000:8000 fire-agent
-```
+- 实现 evidence windowing。
+- 比较 full-text vs top-k evidence context。
 
-并测试 `/health`。
+**当天产出**
 
----
+- `07-context-mcp/context_ablation.py`
 
-### Day 76 — Observability 与运行指标
+**验收测试 / 通过标准**
 
-**学习链接**
+- [ ] 记录质量、输入长度 proxy、延迟。
+- [ ] 若压缩损失质量，报告必须承认。
 
-- <https://docs.langchain.com/langsmith/observability>
+### Day 66 — Memory 与 Retrieval 再定位：不是所有知识都进 Prompt
 
-**任务**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-至少记录：
+**学习网站**
 
-```text
-request_id
-thread_id
-agent_name
-step_count
-tool_name
-latency_ms
-retry_count
-status
-estimated_cost
-error_type
-```
+- [Hello-Agents Ch8](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter8/%E7%AC%AC%E5%85%AB%E7%AB%A0%20%E8%AE%B0%E5%BF%86%E4%B8%8E%E6%A3%80%E7%B4%A2.md)
+- [LangChain RAG](https://docs.langchain.com/oss/python/langchain/rag)
 
----
+**今天学什么**
 
-### Day 77 — Week 11 生产 Gate
+- 回顾 memory/RAG 与 context 的关系。
 
-**任务**
+**今天动手做什么**
 
-在一台干净环境中：
+- 为“论文全文、用户字段模板、历史修正、单位规则”选择存储与注入策略。
 
-1. clone repo
-2. copy `.env.example`
-3. docker build
-4. docker run
-5. curl API
-6. 跑测试
+**当天产出**
 
-任何一步依赖“只有你电脑知道的秘密配置”，都算失败。
+- `07-context-mcp/storage_context_decisions.md`
 
----
+**验收测试 / 通过标准**
 
-## Week 12：作品集、面试与求职化
+- [ ] 四类信息各有读取时机。
+- [ ] 长期记忆不自动等于向量库。
 
-### Day 78 — 阅读完整生产示例
+### Day 67 — MCP：协议层，不是新 Agent 框架
 
-**学习链接**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-- <https://github.com/openai/openai-cs-agents-demo>
-- <https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/email_agent.ipynb>
+**学习网站**
 
-**任务**
+- [Hello-Agents Ch10](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter10/%E7%AC%AC%E5%8D%81%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E9%80%9A%E4%BF%A1%E5%8D%8F%E8%AE%AE.md)
+- [MCP Intro](https://modelcontextprotocol.io/docs/getting-started/intro)
+- [MCP Architecture](https://modelcontextprotocol.io/docs/learn/architecture)
 
-研究：
+**今天学什么**
 
-- backend orchestration
-- UI 与 agent 事件
-- handoff 可视化
-- state management
+- 精读 Ch10 中 MCP；对照官方定义。
+- 理解 host/client/server、tools/resources/prompts。
+- A2A/ANP 只了解，不投入实现。
 
-写 `production_demo_review.md`。
+**今天动手做什么**
 
----
+- 画 MCP 架构图。
+- 列出文献抽取系统中哪些能力值得 MCP 化。
 
-### Day 79 — README 作品集化
-
-**任务**
-
-README 必须有：
-
-1. Problem
-2. Why agentic architecture
-3. Why not pure prompt
-4. Architecture diagram
-5. Agent roles
-6. Tool contracts
-7. State model
-8. Retry / HITL
-9. Evaluation results
-10. Cost / latency
-11. Local setup
-12. Docker
-13. Demo
-14. Limitations
-15. Roadmap
+**当天产出**
 
----
+- `07-context-mcp/mcp_design.md`
 
-### Day 80 — 写 Architecture Decision Records
+**验收测试 / 通过标准**
 
-**任务**
+- [ ] 能口述 MCP 与 Tool、Skill、Agent 的区别。
+- [ ] 禁止把“用了 MCP”当成“多 Agent”。
 
-至少 4 篇：
+### Day 68 — 构建第一个 MCP Server
 
-```text
-ADR-001 Why LangGraph
-ADR-002 Why/Why-not Multi-Agent
-ADR-003 Why MCP for Tool Boundary
-ADR-004 Why Deterministic Validation after LLM Extraction
-```
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-这是很强的面试材料。
+**学习网站**
 
----
+- [MCP Build Server](https://modelcontextprotocol.io/docs/develop/build-server)
+- [MCP Python SDK](https://py.sdk.modelcontextprotocol.io/)
 
-### Day 81 — 系统设计面试训练
+**今天学什么**
 
-**任务**
+- 按官方 Python 路线实现 server。
 
-不看代码，45 分钟回答：
+**今天动手做什么**
 
-> “设计一个每天处理 10 万篇论文、自定义字段抽取、支持人工审核的 Agent 系统。”
+- 暴露 2–3 个只读工具：search_section、get_evidence、normalize_unit。
 
-必须覆盖：
+**当天产出**
 
-- ingestion
-- parsing
-- queue
-- state
-- model routing
-- tools
-- retries
-- idempotency
-- HITL
-- database
-- eval
-- observability
-- cost control
-- security
+- `07-context-mcp/literature_mcp_server/`
 
----
+**验收测试 / 通过标准**
+
+- [ ] server 能启动。
+- [ ] 输入 schema 有效。
+- [ ] 非法参数返回明确错误。
+
+### Day 69 — MCP 接入 Agent：验证“解耦”是否真的发生
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [MCP Examples](https://modelcontextprotocol.io/examples)
+- [MCP Intro](https://modelcontextprotocol.io/docs/getting-started/intro)
+
+**今天学什么**
+
+- 理解 server 可被不同 client 复用。
+
+**今天动手做什么**
+
+- 让一个 Agent client 调用文献抽取 MCP Server。
+- 保留原 in-process tool 作为 baseline。
+
+**当天产出**
+
+- `07-context-mcp/mcp_client_demo.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 相同 10 case 结果语义一致。
+- [ ] 记录额外 latency。
+- [ ] server 挂掉时有降级/错误。
+
+### Day 70 — Level 4 验收：Eval + Context + MCP
+
+**时间预算：** 回归评测 60 min｜演示 50 min｜Trace 答辩 45 min｜总结 15 min（≈2 h 50 min）
 
-### Day 82 — Agent Debugging 面试训练
+**学习网站**
 
-**任务**
+- [Hello-Agents Ch12](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter12/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AB%A0%20%E6%99%BA%E8%83%BD%E4%BD%93%E6%80%A7%E8%83%BD%E8%AF%84%E4%BC%B0.md)
+- [MCP Intro](https://modelcontextprotocol.io/docs/getting-started/intro)
 
-回答以下故障：
+**今天学什么**
 
-1. Agent 一直循环。
-2. Tool 参数经常错。
-3. Multi-Agent 比 Single 更差。
-4. 检索正确但答案错。
-5. 最终答案对但成本突然翻 5 倍。
-6. Handoff 后上下文丢失。
-7. HITL 恢复后重复执行副作用 Tool。
-8. 测试集 95%，线上只有 70%。
+- 只验收。
 
-每题写：检测 → 定位 → 修复 → 防回归。
+**今天动手做什么**
 
+- 演示 ≥80-case regression。
+- 解释 3 个 trace failure。
+- 演示 context ablation。
+- 演示 MCP server/client。
+
+**当天产出**
+
+- `level-gates/level4.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 有 deterministic + judge + trajectory eval。
+- [ ] MCP 不是伪封装。
+- [ ] 能用数据说明 context 策略收益/代价。
+- [ ] 有回归阈值。
+
 ---
+
+# Level 5 — Production + Portfolio + Interview
+
+**周期：** Week 11–12  
+**Level 主要产出：** `Multi-Agent Literature Extraction System`  
+**晋级本质：** 达到可 clone、可运行、可评估、可答辩的求职作品水平
+
+## Week 11 — Production API、测试与 Docker
+
+### Day 71 — 生产项目重构：从 notebook 集合变成软件包
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [FastAPI Tutorial](https://fastapi.tiangolo.com/tutorial/)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+
+**今天学什么**
+
+- 学习应用边界：domain、agents、tools、runtime、api、tests。
+
+**今天动手做什么**
+
+- 重构 Multi-Agent Literature Extraction System 目录。
+- 移除 notebook-only 依赖路径。
+
+**当天产出**
+
+- `08-production-app/`
+
+**验收测试 / 通过标准**
+
+- [ ] 全新 clone 环境可安装。
+- [ ] 核心模块无循环 import。
+- [ ] 配置不硬编码 key。
+
+### Day 72 — FastAPI Contract：Agent 运行必须有稳定 API
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [FastAPI Tutorial](https://fastapi.tiangolo.com/tutorial/)
+
+**今天学什么**
+
+- 学习 request/response models、status code、dependency basics。
+
+**今天动手做什么**
+
+- 实现 POST `/runs`、GET `/runs/{id}`、POST `/runs/{id}/resume`。
+
+**当天产出**
+
+- `08-production-app/api/`
+
+**验收测试 / 通过标准**
+
+- [ ] OpenAPI 自动生成。
+- [ ] 非法请求 4xx，不是 500。
+- [ ] response schema 固定。
 
-### Day 83 — 求职材料
+### Day 73 — Async 与并发：I/O 并发不是多线程魔法
 
-**任务**
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
 
-准备 GitHub Profile 和简历项目描述。
+**学习网站**
 
-建议搜索岗位关键词：
+- [FastAPI Async](https://fastapi.tiangolo.com/async/)
 
-```text
-AI Agent Engineer
-LLM Application Engineer
-Generative AI Engineer
-Applied AI Engineer
-AI Automation Engineer
-Agentic AI Engineer
-LLM Platform Engineer
-Research Engineer - Agents
-```
+**今天学什么**
 
-**简历项目描述必须量化**，例如：
+- 理解 await、I/O-bound、blocking call。
 
-```text
-Built a LangGraph-based literature extraction system with specialized
-composition/property/experiment agents, deterministic Pydantic and unit
-validation, checkpointed HITL, trajectory evaluation, and MCP-based tools;
-evaluated on N labeled cases and reduced X-type errors by Y% versus a
-single-agent baseline.
-```
+**今天动手做什么**
 
-不要虚构数字；只写真实实验结果。
+- 并发 3 个 independent worker。
+- 对同步/异步做小 benchmark。
 
+**当天产出**
+
+- `08-production-app/benchmarks/async_bench.py`
+
+**验收测试 / 通过标准**
+
+- [ ] 无 event loop blocking 的明显长同步调用。
+- [ ] benchmark 有任务规模说明。
+
+### Day 74 — Testing：Agent 测试必须大量 Mock 与参数化
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [FastAPI Testing](https://fastapi.tiangolo.com/tutorial/testing/)
+- [pytest Fixtures](https://docs.pytest.org/en/stable/how-to/fixtures.html)
+- [pytest Parametrize](https://docs.pytest.org/en/stable/how-to/parametrize.html)
+
+**今天学什么**
+
+- 学习 unit/integration/e2e 分层。
+- 理解 MockLLM、fake tool、golden dataset。
+
+**今天动手做什么**
+
+- 补齐 node/tool/router/api 测试。
+- 使用参数化覆盖 failure cases。
+
+**当天产出**
+
+- `08-production-app/tests/`
+
+**验收测试 / 通过标准**
+
+- [ ] 核心 deterministic 模块 coverage 目标≥80%。
+- [ ] 至少 30 个测试。
+- [ ] 测试不默认调用付费模型。
+
+### Day 75 — Docker：别人能跑才算作品
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [FastAPI in Docker](https://fastapi.tiangolo.com/deployment/docker/)
+- [Docker Python Guide](https://docs.docker.com/guides/python/)
+
+**今天学什么**
+
+- 学习 Dockerfile、layer cache、non-root 基本思路、env injection。
+
+**今天动手做什么**
+
+- 构建镜像。
+- 写 `.env.example`，不打包 secrets。
+
+**当天产出**
+
+- `08-production-app/Dockerfile` + `docker-compose.yml`（可选）
+
+**验收测试 / 通过标准**
+
+- [ ] `docker build` 成功。
+- [ ] 容器内 health endpoint 正常。
+- [ ] 镜像中无真实 API key。
+
+### Day 76 — Observability：定义运行指标，不只保存日志
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation)
+
+**今天学什么**
+
+- 定义 latency、model calls、tool calls、retry、HITL rate、success rate、cost proxy。
+
+**今天动手做什么**
+
+- 实现结构化 run summary。
+- 为每个 run 生成 metrics。
+
+**当天产出**
+
+- `08-production-app/observability/`
+
+**验收测试 / 通过标准**
+
+- [ ] 任一 run 可回答“慢在哪里、失败在哪里、调用多少次”。
+
+### Day 77 — Week 11 Production Gate：从新环境启动系统
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [FastAPI Deployment Concepts](https://fastapi.tiangolo.com/deployment/concepts/)
+
+**今天学什么**
+
+- 不新增内容。
+
+**今天动手做什么**
+
+- 模拟新用户：按 README 安装、启动 API、提交 run、触发 HITL、resume、导出结果。
+
+**当天产出**
+
+- `reports/production-smoke-test.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 冷启动流程可复现。
+- [ ] 关键路径 smoke test 自动化。
+- [ ] 出现服务错误时有可定位日志。
+
 ---
+
+## Week 12 — 作品集、系统设计与求职验收
+
+### Day 78 — 现代 Agent Harness 视角：重新审视你 12 周做的东西
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
+
+**今天学什么**
+
+- 重点读 Agent Learning Hub 的 modern harness / evaluation / ship real agent 部分。
+- 快速看 OpenAI Agents SDK primitives：agents、tools、handoffs、guardrails、tracing。
+
+**今天动手做什么**
+
+- 写“Literature Agent Harness Anatomy”：loop、tools、permission gate、state、context、trace、eval。
+
+**当天产出**
+
+- `portfolio/harness_anatomy.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 能指出项目中每一层对应代码位置。
+- [ ] 能说明仍缺失哪些生产能力。
+
+### Day 79 — README 作品集化：让面试官 3 分钟理解价值
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch16](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter16/%E7%AC%AC%E5%8D%81%E5%85%AD%E7%AB%A0%20%E6%AF%95%E4%B8%9A%E8%AE%BE%E8%AE%A1.md)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+
+**今天学什么**
+
+- 参考毕业设计与 Project Ladder 的完整性要求。
+
+**今天动手做什么**
+
+- README 必含：问题、为何 Agent、架构、quickstart、demo、eval、baseline、failure cases、limitations。
+
+**当天产出**
+
+- `08-production-app/README.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 陌生人按 quickstart 可启动。
+- [ ] 首屏 60 秒能理解项目。
+- [ ] 禁止只写技术栈列表。
+
+### Day 80 — Architecture Decision Records：证明你会做取舍
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
+
+**今天学什么**
+
+- 复盘所有重大选择。
+
+**今天动手做什么**
+
+- 至少写 4 篇 ADR：为何 Agent、为何 LangGraph、为何/为何不 Multi-Agent、为何 MCP。
+
+**当天产出**
+
+- `08-production-app/docs/adr/`
+
+**验收测试 / 通过标准**
+
+- [ ] 每篇有 Context/Decision/Alternatives/Consequences。
+- [ ] 至少一篇记录“拒绝某个更复杂方案”。
+
+### Day 81 — Agent System Design 面试：45 分钟白板
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Hello-Agents Interview Questions](https://github.com/datawhalechina/hello-agents/blob/main/Extra-Chapter/Extra01-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93.md)
+- [OpenAI Practical Guide](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
+
+**今天学什么**
+
+- 选择 10 道系统设计题。
+- 重点回答 requirements → boundary → tools → state → eval → safety → observability。
+
+**今天动手做什么**
+
+- 完成一次“企业文献抽取 Agent”白板设计。
+- 限时 45 分钟。
+
+**当天产出**
+
+- `portfolio/system_design_interview.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 必须先澄清成功标准。
+- [ ] 必须包含 failure modes。
+- [ ] 必须说明为何不用全多 Agent。
+
+### Day 82 — Agent Debugging 面试：从 Trace 定位，而不是改 Prompt 碰运气
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [LangSmith Trajectory Evals](https://docs.langchain.com/langsmith/trajectory-evals)
+- [Hello-Agents Interview Questions](https://github.com/datawhalechina/hello-agents/blob/main/Extra-Chapter/Extra01-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93.md)
+
+**今天学什么**
+
+- 训练 8 类故障：wrong tool、bad args、retrieval miss、loop、state leak、context overflow、judge drift、timeout。
+
+**今天动手做什么**
+
+- 制作 8 张故障卡：症状、证据、root cause、fix、regression test。
+
+**当天产出**
+
+- `portfolio/debugging_cards.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 随机抽 5 张，5 分钟内给排查顺序。
+- [ ] 每个修复都附 regression test。
+
+### Day 83 — 求职材料：把项目写成结果，不写“学习了 LangChain”
+
+**时间预算：** 阅读 45 min｜编码 95 min｜测试 30 min｜复盘 10 min（≈3 h）
+
+**学习网站**
+
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+- [Hello-Agents Interview Questions](https://github.com/datawhalechina/hello-agents/blob/main/Extra-Chapter/Extra01-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93.md)
+
+**今天学什么**
+
+- 整理岗位关键词：Agent Engineer、LLM Application Engineer、AI Engineer、Research Engineer。
+- 将项目表述为 problem/architecture/metric/impact。
+
+**今天动手做什么**
+
+- 写 3 条中文简历 bullet + 3 条英文 bullet。
+- 准备 2 分钟项目介绍和 10 分钟深挖版本。
+
+**当天产出**
+
+- `portfolio/job_materials.md`
+
+**验收测试 / 通过标准**
+
+- [ ] 每条 bullet 有技术决策和量化指标占位/实值。
+- [ ] 不能使用无法证明的“显著提升”。
+
+### Day 84 — Level 5 / 全路线终极验收：模拟真实技术面试与项目交付
+
+**时间预算：** 交付演示 90 min｜系统设计 45 min｜Debug 30 min｜总结 15 min（=3 h）
+
+**学习网站**
+
+- [Hello-Agents Ch16](https://github.com/datawhalechina/hello-agents/blob/main/docs/chapter16/%E7%AC%AC%E5%8D%81%E5%85%AD%E7%AB%A0%20%E6%AF%95%E4%B8%9A%E8%AE%BE%E8%AE%A1.md)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+- [FastAPI Deployment Concepts](https://fastapi.tiangolo.com/deployment/concepts/)
 
-### Day 84 — Level 5 / 全路线终极验收
+**今天学什么**
 
-# 最终硬性验收标准
+- 不新增内容。
 
-## A. 原理
+**今天动手做什么**
 
-- [ ] 10 分钟白板解释 Agent Loop。
-- [ ] 精确区分 Workflow / Agent。
-- [ ] 精确区分 State / Context / Memory。
-- [ ] 能解释 Multi-Agent 的收益与代价。
-- [ ] 能解释 Handoff vs Agent-as-Tool。
-- [ ] 能解释 MCP 不是 Agent Framework。
+- 90 分钟项目交付演示：clone→run→evaluate→failure→HITL→resume。
+- 45 分钟系统设计答辩。
+- 30 分钟 Debugging。
+- 生成最终能力矩阵和下一阶段 90 天计划。
 
-## B. 代码
+**当天产出**
 
-- [ ] 自己写过无框架 Agent Loop。
-- [ ] 有 LangChain v1 单 Agent。
-- [ ] 有 LangGraph Graph。
-- [ ] 有 Persistence。
-- [ ] 有 HITL。
-- [ ] 有 Multi-Agent。
-- [ ] 有 MCP Server。
-- [ ] 有 FastAPI。
-- [ ] 有 Docker。
+- `level-gates/final-gate.md` + GitHub-ready project
 
-## C. 可靠性
+**验收测试 / 通过标准**
 
-- [ ] Eval dataset ≥ 80，推荐 ≥ 100。
-- [ ] Deterministic evals ≥ 5。
+- [ ] 项目可运行。
+- [ ] ≥80 case eval；推荐≥100。
+- [ ] Single vs Multi 有数据。
 - [ ] 有 trajectory eval。
-- [ ] 有 failure taxonomy。
-- [ ] 有 retry policy。
-- [ ] 有 stop/budget policy。
-- [ ] 有 trace。
-- [ ] 有成本和延迟统计。
-
-## D. 工程
-
-- [ ] package 化。
-- [ ] `.env.example`。
-- [ ] unit/integration/API tests。
-- [ ] Docker 一键运行。
-- [ ] README 完整。
-- [ ] ≥ 4 篇 ADR。
-- [ ] 架构图。
-- [ ] Demo 视频或 GIF。
-
-## E. 求职
-
-- [ ] 能做 45 分钟 Agent system design。
-- [ ] 能解释 8 类常见 Agent failure。
-- [ ] 能现场实现一个 typed tool。
-- [ ] 能现场实现 conditional routing。
-- [ ] 能解释如何评估 Agent。
-- [ ] 能讲清项目的真实 trade-off，而不是只介绍框架。
+- [ ] 有 FastAPI + Docker + tests。
+- [ ] 有 4+ ADR。
+- [ ] 能解释 Agent Loop 到 production harness 全链路。
 
 ---
 
-# 三、你的终极主项目：FIRe Literature Agent
+# 4. 六个 Level 的硬性验收标准（汇总）
 
-建议最终项目名可以沿用你之前的 **FIRe** 品牌。
+## Level 0 Gate
 
-## 项目目标
+- [ ] 闭卷解释 Agent vs Workflow vs Chatbot。
+- [ ] 闭卷解释 ReAct、Plan-and-Solve、Reflection 的机制与适用边界。
+- [ ] 从空文件手写可运行 Agent Loop：tool call、observation、max_steps、timeout、error policy。
+- [ ] 20-case 固定测试集可重复运行；Schema valid rate=100%。
+- [ ] 能指出至少 3 个必须由确定性代码兜底的位置。
 
-> 输入论文全文 / XML / HTML / 已解析结构，用户自定义字段，系统动态规划证据检索与抽取过程，输出带证据的结构化数据；复杂字段由专业 Agent 协作，低置信度或冲突样本进入 HITL，最后经过确定性代码验证与数据库约束。
+## Level 1 Gate
 
-## 推荐架构
+- [ ] 独立实现最小 Agent Harness：Message、LLM Adapter、Tool Registry、BaseAgent、ReActAgent。
+- [ ] 能把自研组件逐项映射到 LangChain v1。
+- [ ] LangChain single-agent extractor 可运行且拥有结构化输出。
+- [ ] 自研版与 LangChain 版跑同一 dataset，有对照报告。
+- [ ] 能解释何时停止维护自研框架、转向成熟框架。
+
+## Level 2 Gate
+
+- [ ] 能够设计非垃圾桶式 State Schema。
+- [ ] Graph 至少包含 deterministic node、agentic node、conditional route、loop guard。
+- [ ] Persistence/Checkpointer 可展示 state history。
+- [ ] HITL 可 pause/resume。
+- [ ] 故障恢复不要求整条任务从头重跑。
+
+## Level 3 Gate
+
+- [ ] 能比较 Router、Subagents、Handoff、Custom Workflow。
+- [ ] 每个 Agent 有职责、输入/输出 schema、权限、停止条件。
+- [ ] Multi-Agent 对冲突保留 provenance。
+- [ ] 能检测 ping-pong / critic loop。
+- [ ] Single vs Multi 使用同一 ≥50-case dataset 对照。
+
+## Level 4 Gate
+
+- [ ] Eval Dataset ≥80，推荐≥100。
+- [ ] 至少包含 deterministic、LLM-as-judge、trajectory evaluator。
+- [ ] 能从 Trace 将失败归类到 prompt/tool/retrieval/model/state/routing。
+- [ ] 有 Context ablation 实验。
+- [ ] MCP server/client 可运行，且能解释 MCP 与 Agent/Tool/Skill 的区别。
+
+## Level 5 Gate
+
+- [ ] 项目可从新环境 clone 后运行。
+- [ ] FastAPI 有稳定 API contract；Docker 可启动。
+- [ ] 核心 deterministic 模块有系统测试；默认测试不烧付费 API。
+- [ ] README 包含 baseline、eval、failure cases、limitations。
+- [ ] 至少 4 篇 ADR。
+- [ ] 能完成 45 分钟 Agent System Design 与 30 分钟 Debugging 答辩。
+
+---
+
+# 5. 终极主项目：Multi-Agent Literature Extraction System
+
+## 5.1 项目问题定义
+
+面向科学与工程文献，将自然语言正文、表格描述与实验条件转为可审计结构化数据。低热水泥 / 复合胶凝材料可作为首个 benchmark 与应用场景，但不是项目身份本身：
+
+- 组成：C3S、C2S、C3A、C4AF、SCM、外加剂等。
+- 工艺：w/b、细度、养护、煅烧、龄期。
+- 性能：水化热、强度、收缩、耐久、碳排。
+- 证据：来源段落、表格/章节、样品 ID、单位。
+- 不确定性：缺失、冲突、低置信度、人工复核。
+
+## 5.2 推荐最终架构
 
 ```text
-                         User Request
+                         User / API
                               │
-                              ↓
+                              ▼
                        Request Classifier
                               │
-                              ↓
-                        Extraction Planner
-                              │
-             ┌────────────────┼────────────────┐
-             ↓                ↓                ↓
-       Composition Agent  Property Agent  Experiment Agent
-             │                │                │
-             └────────────────┼────────────────┘
-                              ↓
-                        Evidence Merger
-                              ↓
-                        Verifier Agent
-                     ┌────────┴────────┐
-                     ↓                 ↓
-                   PASS              FAIL
-                     │                 │
-                     ↓                 ↓
-           Deterministic Validator  Targeted Retry
-                     │                 │
-                     ├──── conflict ───┘
-                     ↓
-                    HITL
-                     ↓
-             Unit / Rule Validator
-                     ↓
-                  Database
+                  ┌───────────┴───────────┐
+                  ▼                       ▼
+       Deterministic Workflow        Agentic Route
+                  │                       │
+                  │              ┌────────┼────────┐
+                  │              ▼        ▼        ▼
+                  │          Composition Property Experiment
+                  │              Agent    Agent    Agent
+                  │              └────────┼────────┘
+                  │                       ▼
+                  │                Evidence Merger
+                  │                       ▼
+                  │                Verifier Agent
+                  │                 ┌─────┴─────┐
+                  │                 ▼           ▼
+                  │               PASS        ISSUE
+                  │                 │           │
+                  │                 │     Targeted Repair
+                  │                 │           │
+                  └─────────────────┼───────────┘
+                                    ▼
+                         Deterministic Validator
+                                    │
+                           ┌────────┴────────┐
+                           ▼                 ▼
+                        ACCEPT             HITL
+                           │                 │
+                           └────────┬────────┘
+                                    ▼
+                              Database / Export
 ```
 
-## 建议的专业 Agent
+## 5.3 关键设计纪律
 
-### 1. Composition Agent
-
-负责：
-
-- C3S / C2S / C3A / C4AF
-- SCM
-- admixture
-- chemical composition
-
-### 2. Property Agent
-
-负责：
-
-- compressive strength
-- hydration heat
-- shrinkage
-- durability
-
-### 3. Experimental Agent
-
-负责：
-
-- water/binder ratio
-- curing
-- age
-- temperature
-- fineness
-- test standard
-
-### 4. Verifier Agent
-
-只负责：
-
-- 证据是否支持值
-- 单位是否一致
-- 字段是否偷换概念
-- 多处证据是否冲突
-
-### 5. Code Validator
-
-确定性执行：
-
-- Pydantic Schema
-- unit conversion
-- range check
-- cross-field constraints
-- duplicate detection
-- database constraints
+- Agent 只负责需要语义决策的部分。
+- 单位换算、Schema、范围、唯一性约束由代码处理。
+- Verifier 不能无痕覆盖 Extractor。
+- 所有字段保留 evidence/provenance。
+- 所有循环有 budget。
+- 所有架构升级必须对 baseline 做 regression。
 
 ---
 
-# 四、建议建立的 Eval 指标
+# 6. 最终 Eval 指标建议
 
-## 抽取质量
-
-```text
-Field Precision
-Field Recall
-Field F1
-Exact Match
-Numeric Tolerance Accuracy
-Unit Accuracy
-Missing-field Abstention Accuracy
-```
-
-## 证据质量
-
-```text
-Evidence Precision
-Evidence Recall
-Evidence Supports Value
-Section Localization Accuracy
-```
-
-## Agent 轨迹
-
-```text
-Tool Selection Accuracy
-Tool Argument Validity
-Unnecessary Tool Call Rate
-Loop Rate
-Retry Success Rate
-Handoff Accuracy
-Route Accuracy
-```
-
-## 系统工程
-
-```text
-P50 / P95 Latency
-Average Tool Calls
-Average LLM Calls
-Estimated Cost per Paper
-Failure Rate
-Recovery Rate
-HITL Rate
-```
+| 层级 | 指标 | 说明 |
+|---|---|---|
+| 字段 | Field Precision / Recall / F1 | 结构化字段正确性 |
+| 数值 | Normalized Exact Match / MAE | 数值与标准单位 |
+| 证据 | Evidence Precision / Coverage | 是否有真实证据支持 |
+| 结构 | Schema Valid Rate | 可解析性，目标 100% |
+| 工具 | Tool Selection Accuracy | 工具是否选对 |
+| 参数 | Tool Argument Validity | 参数是否满足契约 |
+| 轨迹 | Trajectory Match / Judge | 路径是否合理 |
+| 运行 | Success Rate | 任务完成率 |
+| 运行 | Avg Model Calls / Tool Calls | 调用开销 |
+| 运行 | Latency P50/P95 | 延迟 |
+| 运行 | Retry / HITL Rate | 系统稳定性 |
+| 架构 | Single vs Multi Delta | 多 Agent 真实增益 |
 
 ---
 
-# 五、学习过程中明确“不做什么”
+# 7. 12 周内明确不做什么
 
-## 1. 不从旧版 LangChain 全家桶开始
-
-你只学当前主线所需：
-
-```text
-Model
-Message
-Tool
-Structured Output
-create_agent
-Middleware
-Memory
-LangGraph
-```
-
-## 2. 不把 AutoGen 作为主线
-
-截至本计划核验日期，其官方仓库已标记 Maintenance Mode。可以了解历史思想，但不要投入主学习时间。
-
-官方仓库：<https://github.com/microsoft/autogen>
-
-需要横向扩展时，优先看：
-
-- Microsoft Agent Framework：<https://github.com/microsoft/agent-framework>
-
-## 3. 不同时学五个 Agent 框架
-
-主线：
-
-```text
-LangChain v1
-   ↓
-LangGraph
-   ↓
-OpenAI Agents SDK（横向比较）
-   ↓
-MCP
-```
-
-## 4. 不做大量“天气 Agent”作品集
-
-天气 Demo 只用于学习 Tool Calling。你的作品集应该围绕：
-
-- 文献抽取
-- Deep Research
-- 科研知识工作流
-- 多 Agent 验证
-- Eval
-- HITL
-
-## 5. 不在没有 baseline 时宣称 Multi-Agent 更好
-
-必须：
-
-```text
-Single Agent baseline
-        vs
-Multi-Agent candidate
-```
-
-用同一 Eval Dataset 比较。
+1. **不完整精读 Hello-Agents Ch3**：你已有 Transformer/NLP 基础，只补 Agent 所需缺口。
+2. **不把低代码平台作为主线**：Ch5 可课外了解，12 周主线不投入。
+3. **不主攻 Agentic-RL**：Ch11 暂缓，除非未来转 Agent 训练/后训练岗位。
+4. **不同时学 CrewAI、AutoGen、AgentScope、LangGraph 四套框架**：只横向理解，不并行深挖。
+5. **不做“5 个角色聊天就是多 Agent”**。
+6. **不把 MCP 当 Agent 框架**。
+7. **不把 RAG、Memory、Context 混成一个概念**。
+8. **不在没有固定 dataset 前调 prompt 宣称提升**。
+9. **不使用真实 API key 写进仓库、镜像或截图**。
+10. **不把天气 Agent 当核心作品集**：所有能力最终迁移到 Multi-Agent Literature Extraction System。
 
 ---
 
-# 六、达到什么程度可以开始投递？
+# 8. 达到什么水平可以开始投递
 
-这里不给“学完 12 周必定找到工作”的虚假承诺。更合理的判断是：
+## 可投实习 / 初级 AI Agent / LLM Application Engineer
 
-## 可开始投递初级 / 实习 / 项目型岗位的最低线
+- Level 0–3 全通过。
+- 有一个可运行 single-agent 与一个 multi-agent 对照项目。
+- 会 LangGraph state/persistence/HITL。
+- 有 ≥50 case eval 与失败分类。
+- 能解释 tool contract、stop condition、context isolation。
 
-满足以下 8 项中的至少 7 项：
+## 更有竞争力
 
-- [ ] 有一个非玩具 Agent 项目。
-- [ ] 项目有真实 Tool/API。
-- [ ] 有结构化输出和 Validation。
-- [ ] 有 LangGraph 或等价状态编排。
-- [ ] 有 Eval Dataset。
-- [ ] 有 Trace / Error Analysis。
-- [ ] 有 Docker 与 API。
-- [ ] 能解释架构 trade-off。
+- Level 4 通过。
+- ≥80/100 case regression。
+- trajectory eval + trace debugging。
+- MCP server/client。
+- Single vs Multi 量化实验。
 
-## 更有竞争力的线
+## 作品集可直接用于正式求职
 
-- [ ] Single vs Multi-Agent 对照实验。
-- [ ] trajectory eval。
-- [ ] HITL + resume。
-- [ ] MCP Server。
-- [ ] 成本和延迟分析。
-- [ ] 100+ 测试样本。
-- [ ] 一个真实领域项目：你的 AI4Materials / 低热水泥场景。
-- [ ] GitHub README 与 ADR 完整。
-
-## 研究工程 / 高阶 Agent Engineer 还需继续补
-
-12 周之后继续：
-
-- Distributed systems
-- Queue / event-driven architecture
-- PostgreSQL / Redis
-- Kubernetes 基础
-- Security / OAuth / permissioning
-- Advanced retrieval
-- Model routing
-- Agent learning / RL
-- Benchmark design
-- Open-source contribution
+- Level 5 通过。
+- FastAPI + Docker + tests。
+- GitHub README、ADR、Eval 报告完整。
+- 能在白板上设计真实 Agent 系统。
+- 能从 trace 排查 failure，而不是只会改 prompt。
 
 ---
 
-# 七、12 周之后的进阶路线
-
-## 路线 A：Deep Agent / Long-horizon Agent
-
-- Deep Agents From Scratch：<https://github.com/langchain-ai/deep-agents-from-scratch>
-- Open Deep Research：<https://github.com/langchain-ai/open_deep_research>
-- Deep Research From Scratch：<https://github.com/langchain-ai/deep_research_from_scratch>
-- LangGraph 101 Deep Agents Notebook：<https://github.com/langchain-ai/langgraph-101/blob/main/notebooks/201/deepagents.ipynb>
-
-## 路线 B：更强 Context Engineering
-
-- HF Context Course：<https://huggingface.co/learn/context-course/unit0/introduction>
-- GitHub：<https://github.com/huggingface/context-course>
-
-## 路线 C：第二框架横向比较
-
-- OpenAI Agents SDK：<https://github.com/openai/openai-agents-python>
-- SDK Docs：<https://openai.github.io/openai-agents-python/>
-- Handoffs：<https://openai.github.io/openai-agents-python/handoffs/>
-- Tracing：<https://openai.github.io/openai-agents-python/tracing/>
-
-## 路线 D：企业级 Multi-Agent 横向扩展
-
-- Microsoft Agent Framework：<https://github.com/microsoft/agent-framework>
-- Samples：<https://github.com/microsoft/Agent-Framework-Samples>
-
----
-
-# 八、每周必须提交的学习证据
-
-建议每周 Git commit 至少包含：
-
-```text
-1. 本周概念笔记
-2. 可运行代码
-3. tests
-4. failure log
-5. 一张架构图
-6. 一次 benchmark/eval 结果
-7. 周复盘
-```
-
-周复盘模板：
+# 9. 每周 Review 模板
 
 ```markdown
 # Week N Review
@@ -2548,112 +2712,59 @@ Multi-Agent candidate
 
 ## 2. 我之前理解错了什么
 
-## 3. 一个成功案例
+## 3. 一个成功 Case
 
-## 4. 一个失败案例
+## 4. 一个失败 Case
 
-## 5. Agent 做了什么错误决策
+## 5. 失败发生在哪一层
+- prompt / tool / retrieval / model / state / routing / runtime
 
 ## 6. 代码兜底在哪里生效
 
-## 7. 下周要验证的假设
+## 7. 当前质量 / 成本 / 延迟
 
-## 8. 当前质量 / 成本 / 延迟
+## 8. 下周要验证的一个假设
 ```
 
 ---
 
-# 九、最终建议的学习优先级
+# 10. 核心资源索引
 
-按重要性排序：
-
-```text
-Agent Loop 思维
-    ↓
-Tool Contract
-    ↓
-Structured Output
-    ↓
-State / Control Flow
-    ↓
-Evaluation
-    ↓
-HITL / Persistence
-    ↓
-Context Engineering
-    ↓
-Multi-Agent
-    ↓
-MCP
-    ↓
-Production / Deployment
-```
-
-注意：**Multi-Agent 不应该排在 Evaluation 前面成为你的核心信仰。**
-
-真正能够支撑求职的能力，是你能回答：
-
-> 为什么需要 Agent？为什么需要这个 Tool？为什么要拆 Agent？如何证明变好了？失败时如何恢复？成本是多少？上线后如何监控？
-
-当你能用自己的项目数据回答这些问题时，你才真正具备了 Agent Engineering 的思维。
-
----
-
-# 十、核心官方资源索引
-
-## Agent 基础
-
-- Hugging Face Agents Course：<https://huggingface.co/learn/agents-course/unit0/introduction>
-- Unit 1：<https://huggingface.co/learn/agents-course/unit1/introduction>
-- GitHub：<https://github.com/huggingface/agents-course>
-
-## LangChain / LangGraph
-
-- LangChain Overview：<https://docs.langchain.com/oss/python/langchain/overview>
-- Agents：<https://docs.langchain.com/oss/python/langchain/agents>
-- Tools：<https://docs.langchain.com/oss/python/langchain/tools>
-- Structured Output：<https://docs.langchain.com/oss/python/langchain/structured-output>
-- Context Engineering：<https://docs.langchain.com/oss/python/langchain/context-engineering>
-- LangGraph Overview：<https://docs.langchain.com/oss/python/langgraph/overview>
-- Graph API：<https://docs.langchain.com/oss/python/langgraph/graph-api>
-- Persistence：<https://docs.langchain.com/oss/python/langgraph/persistence>
-- Interrupts：<https://docs.langchain.com/oss/python/langgraph/interrupts>
-- Multi-Agent：<https://docs.langchain.com/oss/python/langchain/multi-agent>
-- LangGraph 101：<https://github.com/langchain-ai/langgraph-101>
-- Agents From Scratch：<https://github.com/langchain-ai/agents-from-scratch>
-
-## Evaluation / Observability
-
-- LangSmith Evaluation：<https://docs.langchain.com/langsmith/evaluation>
-- Evaluation Concepts：<https://docs.langchain.com/langsmith/evaluation-concepts>
-- Evaluate Complex Agent：<https://docs.langchain.com/langsmith/evaluate-complex-agent>
-- Observability：<https://docs.langchain.com/langsmith/observability>
-
-## OpenAI Agents SDK
-
-- GitHub：<https://github.com/openai/openai-agents-python>
-- Quickstart：<https://openai.github.io/openai-agents-python/quickstart/>
-- Handoffs：<https://openai.github.io/openai-agents-python/handoffs/>
-- Tracing：<https://openai.github.io/openai-agents-python/tracing/>
-
-## MCP / Context
-
-- MCP Introduction：<https://modelcontextprotocol.io/docs/getting-started/intro>
-- MCP Architecture：<https://modelcontextprotocol.io/docs/learn/architecture>
-- MCP Specification：<https://modelcontextprotocol.io/specification/2025-11-25>
-- HF MCP Course：<https://huggingface.co/learn/mcp-course/unit0/introduction>
-- HF Context Course：<https://huggingface.co/learn/context-course/unit0/introduction>
-
-## Production
-
-- LangGraph Local Server：<https://docs.langchain.com/oss/python/langgraph/local-server>
-- LangGraph Deployment：<https://docs.langchain.com/oss/python/langgraph/deploy>
-- FastAPI：<https://fastapi.tiangolo.com/>
-- FastAPI Async：<https://fastapi.tiangolo.com/async/>
-- FastAPI Testing：<https://fastapi.tiangolo.com/tutorial/testing/>
-- FastAPI Docker：<https://fastapi.tiangolo.com/deployment/docker/>
-- Docker Python Guide：<https://docs.docker.com/guides/python/>
+- [Hello-Agents 在线阅读](https://datawhalechina.github.io/hello-agents/)
+- [Hello-Agents GitHub](https://github.com/datawhalechina/hello-agents)
+- [Agent Learning Hub](https://github.com/datawhalechina/Agent-Learning-Hub)
+- [LangChain v1 Overview](https://docs.langchain.com/oss/python/langchain/overview)
+- [LangChain Agents](https://docs.langchain.com/oss/python/langchain/agents)
+- [LangChain Tools](https://docs.langchain.com/oss/python/langchain/tools)
+- [LangChain Structured Output](https://docs.langchain.com/oss/python/langchain/structured-output)
+- [LangChain Context Engineering](https://docs.langchain.com/oss/python/langchain/context-engineering)
+- [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
+- [Thinking in LangGraph](https://docs.langchain.com/oss/python/langgraph/thinking-in-langgraph)
+- [LangGraph Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [LangGraph Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
+- [LangGraph 101](https://github.com/langchain-ai/langgraph-101)
+- [LangChain Multi-Agent](https://docs.langchain.com/oss/python/langchain/multi-agent)
+- [Subagents](https://docs.langchain.com/oss/python/langchain/multi-agent/subagents)
+- [Handoffs](https://docs.langchain.com/oss/python/langchain/multi-agent/handoffs)
+- [Router](https://docs.langchain.com/oss/python/langchain/multi-agent/router)
+- [LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation)
+- [Trajectory Evals](https://docs.langchain.com/langsmith/trajectory-evals)
+- [Evaluate Complex Agent](https://docs.langchain.com/langsmith/evaluate-complex-agent)
+- [MCP Introduction](https://modelcontextprotocol.io/docs/getting-started/intro)
+- [Build MCP Server](https://modelcontextprotocol.io/docs/develop/build-server)
+- [MCP Python SDK](https://py.sdk.modelcontextprotocol.io/)
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
+- [OpenAI Agents Handoffs](https://openai.github.io/openai-agents-python/handoffs/)
+- [OpenAI Agents Tracing](https://openai.github.io/openai-agents-python/tracing/)
+- [FastAPI Tutorial](https://fastapi.tiangolo.com/tutorial/)
+- [FastAPI Async](https://fastapi.tiangolo.com/async/)
+- [FastAPI Testing](https://fastapi.tiangolo.com/tutorial/testing/)
+- [FastAPI Docker](https://fastapi.tiangolo.com/deployment/docker/)
 
 ---
 
-> 最后的执行原则：**每天必须有代码或评估产物；每周必须有失败分析；每个 Level 必须通过验收。** 只看视频、只跑 Notebook、只调用框架 API，都不算完成。
+# 11. 最后一条执行原则
+
+> **每学到一个 Agent 概念，都必须回答四个问题：它解决什么失败模式？不用它会怎样？引入它增加什么复杂度？我如何用测试证明它真的有用？**
+
+做到这一点，你形成的就不是“会用 LangChain 的人”，而是 **Agent Engineer 的系统思维**。
