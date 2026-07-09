@@ -23,17 +23,20 @@ git remote -v
 git status --short --branch
 ```
 
-本仓库的 GitHub remote 应指向：
+本仓库的 GitHub remote 优先使用 SSH，便于复用本地已配置的 GitHub 密钥：
 
 ```text
-https://github.com/QyuerYuanqikun/agent-engineering-roadmap.git
+git@github.com:QyuerYuanqikun/agent-engineering-roadmap.git
 ```
+
+HTTPS 地址 `https://github.com/QyuerYuanqikun/agent-engineering-roadmap.git` 仅作为网页访问或备用地址；除非用户明确要求，否则不要把本地 remote 改回 HTTPS。
 
 如果当前目录不是 `agent-engineering-roadmap`，或者 remote 指向其他项目，不得推送本项目修改。
 
 ## 基本原则
 
 - Git 用于记录整个项目的路线、笔记、代码、进度和维护文档；
+- 规划中的空目录也属于项目结构，应在目录内放置 `.gitkeep` 占位文件并提交；
 - GitHub 仓库保持私有，除非用户明确要求修改可见性；
 - 本地修改、暂存、提交和远端推送是不同操作，不能混为一谈；
 - 只有用户明确提出“推送”“上传到 GitHub”或同等意思时，才允许执行 `git push`；
@@ -113,6 +116,7 @@ chore: 初始化项目目录
 
 - 一个学习阶段产物及其测试和文档可以放在同一提交；
 - 单纯路线、笔记或进度调整可以独立提交；
+- 单纯目录结构调整可以提交 `.gitkeep`，用于保留空目录；
 - 格式化、依赖升级和 Agent 行为修改尽量分开；
 - 未完成且不能运行的中间状态不推送到 `main`；
 - 大型或高风险改动优先使用功能分支。
@@ -134,7 +138,7 @@ refactor/eval-suite
 每次推送前至少完成：
 
 1. 使用 `pwd` 确认当前目录是 `agent-engineering-roadmap`；
-2. 使用 `git remote -v` 确认目标远端是 `QyuerYuanqikun/agent-engineering-roadmap`；
+2. 使用 `git remote -v` 确认目标远端优先为 `git@github.com:QyuerYuanqikun/agent-engineering-roadmap.git`；
 3. 使用 `git status` 确认提交范围；
 4. 使用 `git diff` 或 `git show` 检查实际修改；
 5. 检查 `.env`、密钥、Token、账户信息和大文件没有被跟踪；
